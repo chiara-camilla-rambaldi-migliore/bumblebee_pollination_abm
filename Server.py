@@ -1,6 +1,6 @@
 import mesa
 import random
-from Model import Schelling, BeeAgent, PlantAgent
+from Model import GreenArea, BeeAgent, PlantAgent
 
 
 def agents_draw(agent):
@@ -20,7 +20,7 @@ def agents_draw(agent):
         portrayal["Color"] = ["#FFFF00"]
     return portrayal
 
-size = (100, 100)
+size = (50, 50)
 
 canvas_element = mesa.visualization.CanvasGrid(agents_draw, size[0], size[1], 500, 500)
 
@@ -28,7 +28,7 @@ model_params = {
     "height": size[0],
     "width": size[1],
     "plant_density": mesa.visualization.Slider("Plant density", 0.8, 0.1, 1.0, 0.1),
-    "bee_density": mesa.visualization.Slider("Bee density", 0.1, 0.00, 1.0, 0.02),
+    "queens_density": mesa.visualization.Slider("Queens density", 0.003, 0, 0.01, 0.001),
     "no_mow_pc": mesa.visualization.Slider("No mow percentage", 0.2, 0, 1, 0.1),
 }
 
@@ -69,8 +69,8 @@ nectar_chart = BeeNectarBarChart(
 )
 
 server = mesa.visualization.ModularServer(
-    Schelling,
+    GreenArea,
     [canvas_element, total_pollen_chart, nectar_chart],
-    "Schelling",
+    "GreenArea",
     model_params,
 )
