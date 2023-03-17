@@ -64,7 +64,7 @@ class GreenArea(Model):
                     plant_type = 0
                     reward = (0.35, 0.55)
                     
-                agent = PlantAgent(self.plant_id, self, reward, plant_type, plant_stage=PlantStage.FLOWER)
+                agent = PlantAgent(self.plant_id, self, reward, plant_type)#, plant_stage=PlantStage.FLOWER)
                 self.plant_id += 1
                 self.grid.place_agent(agent, (x, y))
                 self.schedule.add(agent)
@@ -105,6 +105,7 @@ class GreenArea(Model):
         self.schedule.step(self.type_ordered_keys)
         # TODO simulate days and seasons
         self.datacollector.collect(self)
+        self.removeDeceasedAgents()
 
     def getCoordForPlants(self):
         (r_max, t_max, l_max, d_max), wood_surface = self.getWoodBoundsAndSurface()
@@ -113,15 +114,22 @@ class GreenArea(Model):
         no_mow_area_height = math.floor(no_mow_area/(self.width-r_max-l_max))
         return ((r_max,d_max), (self.width-1-l_max, no_mow_area_height-1+d_max))
     
+    def getParkBoundaries(self):
+        (r_max, t_max, l_max, d_max), wood_surface = self.getWoodBoundsAndSurface()
+        total_area = (self.width*self.height)-wood_surface
+        area_height = math.floor(total_area/(self.width-r_max-l_max))
+        return ((r_max,d_max), (self.width-1-l_max, area_height-1+d_max))
+
     def createNewFlowers(self, qty, parent: PlantAgent):
-        (x_min, y_min), (x_max, y_max) = self.getCoordForPlants()
+        # TODO può avere senso partire dal neighborhood della pianta per far nascere i semi?
+        (x_min, y_min), (x_max, y_max) = self.getParkBoundaries()
         for cell in self.grid.coord_iter():
             x = cell[1]
             y = cell[2]
             if (
                 x >= x_min and x <= x_max and 
                 y >= y_min and y <= y_max and 
-                self.grid.is_cell_empty((x,y)) and
+                self.grid.is_cell_suitable_for_seed((x,y)) and
                 qty > 0
             ):
                 agent = PlantAgent(self.plant_id, self, parent.reward, parent.plant_type)
@@ -136,8 +144,12 @@ class GreenArea(Model):
             self.bee_id += 1
             self.grid.place_agent(bumblebee, parent.colony.pos)
             self.schedule.add(bumblebee)
-
-    def removeDeceasedAgents(agents):
-        # TODO implement
-        pass
         
+    def removeDeceasedAgents(self):
+        for a in self.schedule.agents:
+            if (
+                (isinstance(a, PlantAgent) and a.plant_stage == PlantStage.DEATH) or
+                (isinstance(a, BeeAgent) and a.stage == BeeStage.DEATH)
+            ):
+                self.schedule.remove(a)
+                #del a

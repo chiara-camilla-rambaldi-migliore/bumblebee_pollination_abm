@@ -25,11 +25,13 @@ class PlantAgent(mesa.Agent):
         self.seed_production_prob = INITIAL_SEED_PROD_PROB if self.plant_stage == PlantStage.FLOWER else 0
         self.age = 0
 
+    def __del__(self):
+        print("I'm being automatically destroyed. Goodbye!")
+
     def step(self):
         if (self.model.schedule.steps % 8 == 0):
             # TODO daily step centralizzato nel modello o nello scheduler
             self.dailyStep()
-        # TODO lifecycle of the plant
         if self.plant_stage == PlantStage.FLOWER:
             bumblebees_in_same_position = self.model.grid.get_cell_bumblebee_list_contents(self.pos)
             for bumblebee in bumblebees_in_same_position:
@@ -46,24 +48,27 @@ class PlantAgent(mesa.Agent):
         # ogni giorno mi si ricarica il nettare e polline
         if self.plant_stage == PlantStage.FLOWER:
             self.completeResourcesRecharge()
-        elif self.plant_stage == PlantStage.DEATH:
-            print("I'm death")
+        elif self.plant_stage == PlantStage.DEATH and floor(MAX_SEEDS*self.seed_production_prob) > 0:
             self.model.createNewFlowers(floor(MAX_SEEDS*self.seed_production_prob), self)
 
     def updateStage(self):
         if self.plant_stage == PlantStage.SEED:
-            if self.age > SEED_AGE:
+            if self.age >= SEED_AGE:
                 if self.model.random.random() < SEED_PROB:
                     self.plant_stage = PlantStage.FLOWER
+                    self.seed_production_prob = INITIAL_SEED_PROD_PROB
                     self.age = 0
                 else:
-                    self.plant_stage = PlantStage.DEATH
-                    self.age = 0
+                    self.setPlantDead()
 
         elif self.plant_stage == PlantStage.FLOWER:
-            if self.age > FLOWER_AGE:
-                self.plant_stage = PlantStage.DEATH
-                self.age = 0
+            if self.age >= FLOWER_AGE:
+                self.setPlantDead()
+
+    def setPlantDead(self):
+        self.plant_stage = PlantStage.DEATH
+        self.model.grid.remove_agent(self)
+
 
     def updateSeedProductionProb(self, bumblebee: mesa.Agent):
         quantity_same_pollen = bumblebee.pollen[self.plant_type]

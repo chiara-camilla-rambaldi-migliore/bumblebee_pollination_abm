@@ -2,12 +2,23 @@ from mesa.space import MultiGrid
 from mesa.agent import Agent
 import CustomAgents
 from typing import Tuple, Iterable
+from Utils import PlantStage
 
 Coordinate = Tuple[int, int]
 
 class CustomMultiGrid(MultiGrid):
     def __init__(self, width: int, height: int, torus: bool) -> None:
         super().__init__(width, height, torus)
+
+    def is_cell_suitable_for_seed(self, pos: Coordinate) -> bool:
+        """Returns a bool of the contents of a cell."""
+        x, y = pos
+        plants = list(filter(lambda a: (isinstance(a, CustomAgents.PlantAgent) and a.plant_stage != PlantStage.DEATH), self.grid[x][y]))
+        if len(plants) > 0:
+            return False
+            
+        return True
+
 
     def get_custom_neighbors(
         self,
