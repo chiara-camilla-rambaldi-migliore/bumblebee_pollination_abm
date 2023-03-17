@@ -1,8 +1,6 @@
 from mesa.agent import Agent
-from .PlantAgent import PlantAgent
 import numpy as np
 from Utils import BeeStage, BeeType
-from .ColonyAgent import ColonyAgent
 
 QUEEN_FORAGING_DAYS = 15
 BEE_AGE_EXPERIENCE = 5
@@ -13,7 +11,7 @@ class BeeAgent(Agent):
     Bee agent
     """
 
-    def __init__(self, id, model, flower_type_quantity, bee_type, bee_stage, colony: ColonyAgent, max_memory = 10):
+    def __init__(self, id, model, flower_type_quantity, bee_type, bee_stage, colony: Agent, max_memory = 10):
         """
         Create a new bumblebe agent.
 
@@ -34,8 +32,12 @@ class BeeAgent(Agent):
         self.queen_age = 0 # TODO decidere se resettare direttamente l'age nel momento in cui si risveglia dall'ibernazione.
         self.stage = bee_stage
         self.max_pollen_load = MAX_POLLEN_LOAD
+        self.flower_type_quantity = flower_type_quantity
+        self.initializePollen()
         self.updateCollectionRatio()
-        for i in range(flower_type_quantity):
+
+    def initializePollen(self):
+        for i in range(self.flower_type_quantity):
             self.pollen[i] = 0
 
     def updateCollectionRatio(self):
@@ -48,11 +50,11 @@ class BeeAgent(Agent):
 
     def step(self):
         # simulare viaggi (ogni tot step, torna alla colonia e deposita polline e nettare)
-        if (self.model.schedule.steps % 100 == 0):
+        if (self.model.schedule.steps % 4 == 0):
             self.returnToColonyStep()
-        if (self.model.schedule.steps % 1000 == 0):
+        if (self.model.schedule.steps % 8 == 0):
             # TODO daily step centralizzato nel modello o nello scheduler
-            self.daily_step()
+            self.dailyStep()
         else:
             #colleziona polline e nettare dalla pianta in cui sono
             if(
@@ -73,11 +75,14 @@ class BeeAgent(Agent):
     def returnToColonyStep(self):
         # TODO pollen is stored and used in the colony
         self.colony.collectResources(self)
+        self.nectar = 0
+        self.initializePollen()
+        self.model.grid.move_agent(self, self.colony.pos)
         # TODO only when they are fully loaded, or they have traveled too much or its night.
         # TODO colony uses the nectar in function of number of bees present.
         pass
 
-    def daily_step(self):
+    def dailyStep(self):
         self.age += 1
         self.updateCollectionRatio()
         self.stage = BeeStage.newStage(self.stage, self.age)
@@ -87,7 +92,7 @@ class BeeAgent(Agent):
 
     def updatePollenNectarMemory(self):
         # TODO let plant produce seeds based on the quantity and variety of pollen brought by the bumblebee
-        plant_in_same_position = list(filter(lambda a: isinstance(a, PlantAgent), self.model.grid.get_cell_list_contents(self.pos)))
+        plant_in_same_position = self.model.grid.get_cell_plant_list_contents(self.pos)
         if len(plant_in_same_position) > 0:
             plant = plant_in_same_position[0]
             pollen_from_plant = plant.getPollen(self.collection_ratio)
@@ -104,13 +109,13 @@ class BeeAgent(Agent):
 
     def getNewPosition(self):
         # guarda per ogni pianta se è nella memoria del bombo e scegli di visitare quella con reward maggiore e spostati in quella posizione
-        neighbors = list(filter(lambda n: isinstance(n, PlantAgent), self.model.grid.get_neighbors(self.pos, True)))
+        neighbors = self.model.grid.get_plant_neighbors(self.pos, True, radius=8)
         plant_types = []
         for plant in neighbors:
             if plant.plant_type not in plant_types:
                 plant_types.append(plant.plant_type)
 
-        neighborhood = self.model.grid.get_neighborhood(self.pos, True)
+        neighborhood = self.model.grid.get_neighborhood(self.pos, True, radius = 8)
         newPosition = neighborhood[np.random.randint(0, len(neighborhood))]
         if (len(neighbors) > 0):
             plantMeanRewards = self.getPlantMeanRewards()
@@ -128,6 +133,8 @@ class BeeAgent(Agent):
                     else:
                         plants_to_choose = plants_to_choose[0]
                     newPosition = plants_to_choose.pos
+            else:
+                newPosition = neighbors[0].pos
         return newPosition
 
     def getPlantMeanRewards(self):

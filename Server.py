@@ -1,6 +1,7 @@
 import mesa
 import random
-from Model import GreenArea, BeeAgent, PlantAgent
+from Model import GreenArea
+from CustomAgents import PlantAgent, BeeAgent, ColonyAgent
 
 
 def agents_draw(agent):
@@ -16,8 +17,10 @@ def agents_draw(agent):
             portrayal["Color"] = ["#AA0000"]
         else:
             portrayal["Color"] = ["#0000AA"]
-    else:
+    elif isinstance(agent, BeeAgent):
         portrayal["Color"] = ["#FFFF00"]
+    else:
+        portrayal["Color"] = ["#993300"]
     return portrayal
 
 size = (50, 50)
@@ -63,14 +66,15 @@ class BeeNectarBarChart(mesa.visualization.BarChartModule):
         return current_values
 
 nectar_chart = BeeNectarBarChart(
-    [{"Label": "Nectar", "Color": f"#{random.randint(0, 0xFFFFFF):06x}"}],
+    [{"Label": "Nectar", "Color": f"#00ffcc"}],
     scope="agent",
     data_collector_name='datacollector'
 )
 
 server = mesa.visualization.ModularServer(
     GreenArea,
-    [canvas_element, total_pollen_chart, nectar_chart],
+    #[canvas_element, total_pollen_chart, nectar_chart],
+    [canvas_element , nectar_chart],
     "GreenArea",
     model_params,
 )

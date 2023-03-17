@@ -1,7 +1,7 @@
 from mesa.model import Model
-from mesa.space import MultiGrid
+from CustomMultiGrid import CustomMultiGrid
 from mesa import DataCollector
-from Utils import BeeType, BeeStage
+from Utils import BeeType, BeeStage, PlantStage
 import math
 from CustomAgents.PlantAgent import PlantAgent
 from CustomAgents.BeeAgent import BeeAgent
@@ -35,10 +35,10 @@ class GreenArea(Model):
         self.no_mow_pc = no_mow_pc
 
         self.schedule = RandomActivationByTypeOrdered(self)
-        self.grid = MultiGrid(width, height, torus=False)
+        self.grid = CustomMultiGrid(width, height, torus=False)
 
         self.datacollector = DataCollector(
-            model_reporters={"Total pollen": computeTotalPollen},
+            #model_reporters={"Total pollen": computeTotalPollen},
             agent_reporters={
                 "Nectar": lambda agent: agent.nectar if isinstance(agent, BeeAgent) else None
             }
@@ -64,7 +64,7 @@ class GreenArea(Model):
                     plant_type = 0
                     reward = (0.35, 0.55)
                     
-                agent = PlantAgent(self.plant_id, self, reward, plant_type)
+                agent = PlantAgent(self.plant_id, self, reward, plant_type, plant_stage=PlantStage.FLOWER)
                 self.plant_id += 1
                 self.grid.place_agent(agent, (x, y))
                 self.schedule.add(agent)

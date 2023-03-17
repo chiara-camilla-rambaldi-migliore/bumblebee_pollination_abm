@@ -1,5 +1,4 @@
 import mesa
-from .BeeAgent import BeeAgent
 
 class ColonyAgent(mesa.Agent):
     def __init__(self, id, model):
@@ -8,7 +7,7 @@ class ColonyAgent(mesa.Agent):
         self.pollen = 0
         self.consumption_per_bee = 1.5
 
-    def setQueen(self, queen: BeeAgent):
+    def setQueen(self, queen: mesa.Agent):
         self.queen = queen
 
     def step(self):
@@ -17,6 +16,6 @@ class ColonyAgent(mesa.Agent):
     def daily_step(self):
         pass
 
-    def collectResources(self, bee: BeeAgent):
+    def collectResources(self, bee: mesa.Agent):
         self.nectar += bee.nectar
         self.pollen += sum(bee.pollen.values())
