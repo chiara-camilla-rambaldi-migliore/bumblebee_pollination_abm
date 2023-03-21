@@ -14,7 +14,12 @@ class ColonyAgent(mesa.Agent):
         pass
 
     def daily_step(self):
-        pass
+        self.useResources()
+
+    def useResources(self):
+        # TODO pollen and nectar are used in the colony based on the population
+        self.nectar -= 1
+        self.pollen -= 1
 
     def collectResources(self, bee: mesa.Agent):
         self.nectar += bee.nectar

@@ -71,13 +71,13 @@ class BeeAgent(Agent):
 
     def step(self):
         # simulare viaggi (ogni tot step, torna alla colonia e deposita polline e nettare)
-        if (self.model.schedule.steps % 4 == 0):
+        if (self.model.schedule.steps % 4 == 0 and self.bee_type != BeeType.MALE):
             self.returnToColonyStep()
         else:
             #colleziona polline e nettare dalla pianta in cui sono
-            # TODO foraging males e new queens
+            # foraging workers, males and new queens
             if(
-                (self.bee_type == BeeType.WORKER and self.bee_stage == BeeStage.BEE) or
+                (self.bee_type != BeeType.NEST_BEE and self.bee_stage == BeeStage.BEE) or
                 (self.bee_type == BeeType.QUEEN and self.age < QUEEN_FORAGING_DAYS and self.bee_stage == BeeStage.QUEEN)
             ):
                 self.updatePollenNectarMemory()
@@ -86,12 +86,9 @@ class BeeAgent(Agent):
 
 
         # TODO memoria del posto che ha dato maggior reward, ogni giorno si recano verso quell'aiuola, se non c'è cibo si spostano verso quella più vicina).
-        # TODO a fine estate comincia a produrre males e queens.
-        # TODO le nuove regine a inizio autunno se son riuscite ad accoppiarsi si ibernano
 
 
     def returnToColonyStep(self):
-        # TODO pollen is stored and used in the colony
         self.colony.collectResources(self)
         self.nectar = 0
         self.initializePollen()

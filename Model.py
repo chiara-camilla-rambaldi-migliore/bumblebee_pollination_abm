@@ -104,8 +104,9 @@ class GreenArea(Model):
         """
         Run one step of the model. 
         """
+        # days are simulated in the schedule
         self.schedule.step(self.type_ordered_keys)
-        # TODO simulate days and seasons
+        # TODO simulate seasons
         self.datacollector.collect(self)
         self.removeDeceasedAgents()
         # TODO simulare taglio erba periodico
