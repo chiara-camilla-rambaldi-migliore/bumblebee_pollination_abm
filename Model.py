@@ -11,6 +11,8 @@ from CustomTime import RandomActivationByTypeOrdered
 # TODO un possibile parametro è la forma dello sfalcio
 # TODO un altro parametro è la dezanzarizzazione, un obiettivo è la vivibilità del parco.
 
+STEPS_PER_DAY = 8
+
 def computeTotalPollen(model):
     total_pollen = 0
     for agent in model.schedule.agents:
@@ -34,7 +36,7 @@ class GreenArea(Model):
         self.queens_density = queens_density
         self.no_mow_pc = no_mow_pc
 
-        self.schedule = RandomActivationByTypeOrdered(self)
+        self.schedule = RandomActivationByTypeOrdered(self, STEPS_PER_DAY)
         self.grid = CustomMultiGrid(width, height, torus=False)
 
         self.datacollector = DataCollector(
@@ -106,6 +108,7 @@ class GreenArea(Model):
         # TODO simulate days and seasons
         self.datacollector.collect(self)
         self.removeDeceasedAgents()
+        # TODO simulare taglio erba periodico
 
     def getCoordForPlants(self):
         (r_max, t_max, l_max, d_max), wood_surface = self.getWoodBoundsAndSurface()
@@ -149,7 +152,6 @@ class GreenArea(Model):
         for a in self.schedule.agents:
             if (
                 (isinstance(a, PlantAgent) and a.plant_stage == PlantStage.DEATH) or
-                (isinstance(a, BeeAgent) and a.stage == BeeStage.DEATH)
+                (isinstance(a, BeeAgent) and a.bee_stage == BeeStage.DEATH)
             ):
                 self.schedule.remove(a)
-                #del a

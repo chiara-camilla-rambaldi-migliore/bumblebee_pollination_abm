@@ -1,10 +1,31 @@
 from mesa.agent import Agent
 import numpy as np
+from math import floor
 from Utils import BeeStage, BeeType
 
 QUEEN_FORAGING_DAYS = 15
 BEE_AGE_EXPERIENCE = 5
 MAX_POLLEN_LOAD = 20
+MALE_PERCENTAGE = 0.3
+NEW_QUEENS_PERCENTAGE = 0.1
+MAX_EGG = 20 #maximum number of eggs a queen can lay for every deposition
+DAYS_PER_EGGS = 20 #number of days between depositions of eggs
+QUEEN_MALE_PRODUCTION_PERIOD = 150 #number of days after queen dishibernation for males and queen production
+HIBERNATION_SURVIVAL_PROB = 0.8
+STAGE_DAYS = {
+    BeeStage.EGG: 4,
+    BeeStage.LARVAE: 4,
+    BeeStage.PUPA: 8,
+    BeeStage.BEE: {
+        BeeType.WORKER: 20,
+        BeeType.NEST_BEE: 25,
+        BeeType.MALE: 10,
+        BeeType.QUEEN: 15
+    },
+    BeeStage.HIBERNATION: 180
+}
+
+DAYS_BEFORE_HIBERNATION = 10
 
 class BeeAgent(Agent):
     """
@@ -29,8 +50,8 @@ class BeeAgent(Agent):
         self.pollen = {}
         self.colony = colony
         self.age = 0 #days
-        self.queen_age = 0 # TODO decidere se resettare direttamente l'age nel momento in cui si risveglia dall'ibernazione.
-        self.stage = bee_stage
+        self.mated = False
+        self.bee_stage = bee_stage
         self.max_pollen_load = MAX_POLLEN_LOAD
         self.flower_type_quantity = flower_type_quantity
         self.initializePollen()
@@ -52,15 +73,12 @@ class BeeAgent(Agent):
         # simulare viaggi (ogni tot step, torna alla colonia e deposita polline e nettare)
         if (self.model.schedule.steps % 4 == 0):
             self.returnToColonyStep()
-        if (self.model.schedule.steps % 8 == 0):
-            # TODO daily step centralizzato nel modello o nello scheduler
-            self.dailyStep()
         else:
             #colleziona polline e nettare dalla pianta in cui sono
+            # TODO foraging males e new queens
             if(
-                (self.bee_type == BeeType.WORKER or
-                (self.bee_type == BeeType.QUEEN and self.queen_age < QUEEN_FORAGING_DAYS)) and
-                self.stage == BeeStage.BEE
+                (self.bee_type == BeeType.WORKER and self.bee_stage == BeeStage.BEE) or
+                (self.bee_type == BeeType.QUEEN and self.age < QUEEN_FORAGING_DAYS and self.bee_stage == BeeStage.QUEEN)
             ):
                 self.updatePollenNectarMemory()
                 newPosition = self.getNewPosition()
@@ -85,13 +103,62 @@ class BeeAgent(Agent):
     def dailyStep(self):
         self.age += 1
         self.updateCollectionRatio()
-        self.stage = BeeStage.newStage(self.stage, self.age)
+        self.bee_stage = self.updateStage()
         if(self.bee_type == BeeType.QUEEN):
-            # TODO create new eggs
-            pass
+            if self.model.schedule.days % DAYS_PER_EGGS == 0:
+                self.createNewEggs()
+
+    def createNewEggs(self):
+        prob = self.model.random.randrange(6,10)/10
+        eggs = floor(prob * MAX_EGG)
+        if self.age  < QUEEN_MALE_PRODUCTION_PERIOD:
+            self.model.createNewBumblebees(eggs, BeeType.WORKER, self)
+        else:
+            male_eggs = floor(MALE_PERCENTAGE*eggs)
+            new_queen_eggs = floor(NEW_QUEENS_PERCENTAGE*eggs)
+            eggs = eggs - male_eggs - new_queen_eggs
+
+            self.model.createNewBumblebees(eggs, BeeType.WORKER, self)
+            self.model.createNewBumblebees(male_eggs, BeeType.MALE, self)
+            self.model.createNewBumblebees(new_queen_eggs, BeeType.QUEEN, self)
+
+    def updateStage(self):
+        if self.bee_stage == BeeStage.EGG:
+            if self.age >= STAGE_DAYS[BeeStage.EGG]:
+                self.age = 0
+                self.bee_stage = BeeStage.LARVAE
+
+        elif self.bee_stage == BeeStage.LARVAE:
+            if self.age >= STAGE_DAYS[BeeStage.LARVAE]:
+                self.age = 0
+                self.bee_stage =  BeeStage.PUPA
+                
+        elif self.bee_stage == BeeStage.PUPA:
+            if self.age >= STAGE_DAYS[BeeStage.PUPA]:
+                self.age = 0
+                self.bee_stage =  BeeStage.BEE
+                
+        elif self.bee_stage == BeeStage.BEE:
+            if self.age >= STAGE_DAYS[BeeStage.BEE][self.bee_type]:
+                if(self.bee_type == BeeType.QUEEN):
+                    self.bee_stage = BeeStage.HIBERNATION
+                else:
+                    self.bee_stage =  BeeStage.DEATH
+                    self.setBeeDead()
+                
+        elif self.bee_stage == BeeStage.HIBERNATION:
+            if self.age >= STAGE_DAYS[BeeStage.HIBERNATION]:
+                if(self.model.random.random() < HIBERNATION_SURVIVAL_PROB):
+                    self.age = 0
+                    self.bee_stage =  BeeStage.QUEEN
+                else:
+                    self.setBeeDead()
+
+    def setBeeDead(self):
+        self.plant_stage = BeeStage.DEATH
+        self.model.grid.remove_agent(self)
 
     def updatePollenNectarMemory(self):
-        # TODO let plant produce seeds based on the quantity and variety of pollen brought by the bumblebee
         plant_in_same_position = self.model.grid.get_cell_plant_list_contents(self.pos)
         if len(plant_in_same_position) > 0:
             plant = plant_in_same_position[0]

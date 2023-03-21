@@ -11,6 +11,8 @@ INITIAL_SEED_PROD_PROB = 0.1 #initial porbability of seed production (it takes i
 MAX_SEEDS = 10 #maximum number of seeds producted by the flower
 SEED_PROB = 0.6 #probability of a seed to become a flower
 
+# TODO seed hibernation
+
 
 class PlantAgent(mesa.Agent):
     def __init__(self, id, model: mesa.Model, reward, plant_type, plant_stage = PlantStage.SEED, nectar_storage = 100, pollen_storage = 100):
@@ -29,9 +31,6 @@ class PlantAgent(mesa.Agent):
         print("I'm being automatically destroyed. Goodbye!")
 
     def step(self):
-        if (self.model.schedule.steps % 8 == 0):
-            # TODO daily step centralizzato nel modello o nello scheduler
-            self.dailyStep()
         if self.plant_stage == PlantStage.FLOWER:
             bumblebees_in_same_position = self.model.grid.get_cell_bumblebee_list_contents(self.pos)
             for bumblebee in bumblebees_in_same_position:
