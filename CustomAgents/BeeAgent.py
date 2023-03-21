@@ -140,7 +140,7 @@ class BeeAgent(Agent):
                 
         elif self.bee_stage == BeeStage.BEE:
             if self.age >= STAGE_DAYS[BeeStage.BEE][self.bee_type]:
-                if(self.bee_type == BeeType.QUEEN):
+                if(self.bee_type == BeeType.QUEEN and self.mated):
                     self.bee_stage = BeeStage.HIBERNATION
                 else:
                     self.bee_stage =  BeeStage.DEATH
