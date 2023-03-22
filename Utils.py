@@ -21,3 +21,6 @@ class BeeStage(Enum):
     HIBERNATION = 6
     QUEEN = 7
     
+class PlantType(Enum):
+    TYPE1 = 1
+    TYPE2 = 2

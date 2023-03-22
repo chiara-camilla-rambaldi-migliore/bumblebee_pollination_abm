@@ -22,14 +22,14 @@ class CustomMultiGrid(MultiGrid):
 
     def get_custom_neighbors(
         self,
-        agent_type,
+        lambda_func,
         pos: Coordinate,
         moore: bool,
         include_center: bool = False,
         radius: int = 1
     ):
         neighbors = self.get_neighbors(pos, moore, include_center, radius)
-        return list(filter(lambda n: isinstance(n, agent_type), neighbors))
+        return list(filter(lambda_func, neighbors))
 
     def get_plant_neighbors(
         self,
@@ -38,7 +38,8 @@ class CustomMultiGrid(MultiGrid):
         include_center: bool = False,
         radius: int = 1
     ) -> list[CustomAgents.PlantAgent]:
-        return self.get_custom_neighbors(CustomAgents.PlantAgent, pos, moore, include_center, radius)
+        lambda_func = lambda n: isinstance(n, CustomAgents.PlantAgent) and n.plant_stage == PlantStage.FLOWER
+        return self.get_custom_neighbors(lambda_func, pos, moore, include_center, radius)
 
     def get_bumblebee_neighbors(
         self,
@@ -47,24 +48,27 @@ class CustomMultiGrid(MultiGrid):
         include_center: bool = False,
         radius: int = 1
     ) -> list[CustomAgents.BeeAgent]:
-        return self.get_custom_neighbors(CustomAgents.BeeAgent, pos, moore, include_center, radius)
+        lambda_func = lambda n: isinstance(n, CustomAgents.BeeAgent)
+        return self.get_custom_neighbors(lambda_func, pos, moore, include_center, radius)
 
     def get_cell_custom_list_contents(
         self, 
-        agent_type, 
+        lambda_func, 
         cell_list: Iterable[Coordinate]
     ) -> list[Agent]:
-        return list(filter(lambda a: isinstance(a, agent_type), self.get_cell_list_contents(cell_list)))
+        return list(filter(lambda_func, self.get_cell_list_contents(cell_list)))
 
     
     def get_cell_plant_list_contents(
         self, 
         cell_list: Iterable[Coordinate]
     ) -> list[CustomAgents.PlantAgent]:
-        return self.get_cell_custom_list_contents(CustomAgents.PlantAgent, cell_list)
+        lambda_func = lambda a: isinstance(a, CustomAgents.PlantAgent) and a.plant_stage == PlantStage.FLOWER
+        return self.get_cell_custom_list_contents(lambda_func, cell_list)
 
     def get_cell_bumblebee_list_contents(
         self, 
         cell_list: Iterable[Coordinate]
     ) -> list[CustomAgents.BeeAgent]:
-        return self.get_cell_custom_list_contents(CustomAgents.BeeAgent, cell_list)
+        lambda_func = lambda a: isinstance(a, CustomAgents.BeeAgent)
+        return self.get_cell_custom_list_contents(lambda_func, cell_list)

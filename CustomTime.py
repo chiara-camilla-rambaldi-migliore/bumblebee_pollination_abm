@@ -7,10 +7,6 @@ class RandomActivationByTypeOrdered(RandomActivationByType):
         super().__init__(model)
         self.days = 0
         self.daily_step = daily_step
-        if self.daily_step != 0 and self.steps % self.daily_step == 0:
-            self.is_daily_step = True
-        else: 
-            self.is_daily_step = False
 
     def step(self, type_ordered_keys: list[type[Agent]], shuffle_agents: bool = True) -> None:
         """
@@ -23,9 +19,13 @@ class RandomActivationByTypeOrdered(RandomActivationByType):
                             type group is shuffled.
             daily_step: How many steps 
         """
+        if self.daily_step != 0 and self.steps % self.daily_step == 0:
+            is_daily_step = True
+        else: 
+            is_daily_step = False
         for agent_class in type_ordered_keys:
             self.step_type(agent_class, shuffle_agents=shuffle_agents)
-            if self.is_daily_step:
+            if is_daily_step:
                 self.daily_step_type(agent_class, shuffle_agents=shuffle_agents)
         self.steps += 1
         self.time += 1

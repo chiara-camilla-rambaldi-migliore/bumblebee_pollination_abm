@@ -2,7 +2,20 @@ import mesa
 import random
 from Model import GreenArea
 from CustomAgents import PlantAgent, BeeAgent, ColonyAgent
+from Utils import BeeStage, BeeType, PlantStage, PlantType
 
+
+PORTRAYAL_BEE = {
+    BeeType.MALE: {"Shape": "circle", "r": 0.4, "Filled": "true", "Layer": 0, "Color": ["#FFDC00"]},
+    BeeType.NEST_BEE: {"Shape": "circle", "r": 0.3, "Filled": "true", "Layer": 0, "Color": ["#FFF000"]},
+    BeeType.WORKER: {"Shape": "circle", "r": 0.5, "Filled": "true", "Layer": 0, "Color": ["#FEEA00"]},
+    BeeType.QUEEN: {"Shape": "circle", "r": 0.3, "Filled": "true", "Layer": 0, "Color": ["#FFCC00"]}
+}
+PORTRAYAL_FLOWER = {
+    PlantType.TYPE1: {'Shape': 'circle', 'r': 0.5, 'Filled': 'true', 'Layer': 0, 'Color': ['#FF5050']},
+    PlantType.TYPE2: {'Shape': 'circle', 'r': 0.5, 'Filled': 'true', 'Layer': 0, 'Color': ['#3366FF']}
+}
+print(PORTRAYAL_BEE[BeeType.MALE])
 
 def agents_draw(agent):
     """
@@ -13,14 +26,32 @@ def agents_draw(agent):
     portrayal = {"Shape": "circle", "r": 0.5, "Filled": "true", "Layer": 0}
 
     if isinstance(agent, PlantAgent):
-        if agent.plant_type == 0:
-            portrayal["Color"] = ["#AA0000"]
+        if agent.plant_type == PlantType.TYPE1:
+            portrayal["Color"] = ["#FF5050"]
         else:
-            portrayal["Color"] = ["#0000AA"]
+            portrayal["Color"] = ["#3366FF"]
     elif isinstance(agent, BeeAgent):
-        portrayal["Color"] = ["#FFFF00"]
+        portrayal = {'Shape': 'circle', 'r': 0.4, 'Filled': 'true', 'Layer': 0}
+        portrayal["Color"] = ["#FFDC00"]
     else:
         portrayal["Color"] = ["#993300"]
+    return portrayal
+
+def new_agents_draw(agent):
+    # TODO fix colors
+    """
+    Portrayal Method for canvas
+    """
+    if agent is None:
+        return
+    
+    portrayal = {}
+
+    if isinstance(agent, PlantAgent):
+        portrayal = PORTRAYAL_FLOWER[agent.plant_type]
+    elif isinstance(agent, BeeAgent):
+        portrayal = PORTRAYAL_BEE[agent.bee_type]
+
     return portrayal
 
 size = (50, 50)

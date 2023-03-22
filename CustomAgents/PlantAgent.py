@@ -1,6 +1,6 @@
 import mesa
 import numpy as np
-from Utils import PlantStage
+from Utils import PlantStage, PlantType
 from math import floor
 
 NECTAR_STEP_RECHARGE = 0.1 #amount of recharge after a step
@@ -15,7 +15,7 @@ SEED_PROB = 0.6 #probability of a seed to become a flower
 
 
 class PlantAgent(mesa.Agent):
-    def __init__(self, id, model: mesa.Model, reward, plant_type, plant_stage = PlantStage.SEED, nectar_storage = 100, pollen_storage = 100):
+    def __init__(self, id, model: mesa.Model, reward, plant_type: PlantType, plant_stage = PlantStage.SEED, nectar_storage = 100, pollen_storage = 100):
         super().__init__(f"plant_{id}", model)
         self.reward = reward
         self.plant_type = plant_type
@@ -28,7 +28,7 @@ class PlantAgent(mesa.Agent):
         self.age = 0
 
     def __del__(self):
-        print("I'm being automatically destroyed. Goodbye!")
+        print("Deleted plant")
 
     def step(self):
         if self.plant_stage == PlantStage.FLOWER:

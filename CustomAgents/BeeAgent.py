@@ -1,9 +1,12 @@
 from mesa.agent import Agent
 import numpy as np
 from math import floor
-from Utils import BeeStage, BeeType
+from Utils import BeeStage, BeeType, PlantType
+
+# TODO sampling mode
 
 QUEEN_FORAGING_DAYS = 15
+STEPS_COLONY_RETURN = 4 # should be a multiple of steps per day
 BEE_AGE_EXPERIENCE = 5
 MAX_POLLEN_LOAD = 20
 MALE_PERCENTAGE = 0.3
@@ -32,20 +35,20 @@ class BeeAgent(Agent):
     Bee agent
     """
 
-    def __init__(self, id, model, flower_type_quantity, bee_type, bee_stage, colony: Agent, max_memory = 10):
+    def __init__(self, id, model, bee_type, bee_stage, colony: Agent, max_memory = 10):
         """
         Create a new bumblebe agent.
 
         Args:
            id: Unique identifier for the agent.
            model: model associated.
-           flower_type_quantity: quantity of flower types present in the model.
            max_memory: maximum number of reward remembered by the bee.
         """
         super().__init__(f"bee_{id}", model)
         self.rewarded_memory = [] #list of tuple (plant_type, reward)
         self.bee_type = bee_type
         self.max_memory = max_memory
+        self.last_flower_position = None
         self.nectar = 0
         self.pollen = {}
         self.colony = colony
@@ -53,13 +56,12 @@ class BeeAgent(Agent):
         self.mated = False
         self.bee_stage = bee_stage
         self.max_pollen_load = MAX_POLLEN_LOAD
-        self.flower_type_quantity = flower_type_quantity
         self.initializePollen()
         self.updateCollectionRatio()
 
     def initializePollen(self):
-        for i in range(self.flower_type_quantity):
-            self.pollen[i] = 0
+        for type in PlantType:
+            self.pollen[type] = 0
 
     def updateCollectionRatio(self):
         # il polline e nettare collezionato aumenta con l'età
@@ -68,10 +70,17 @@ class BeeAgent(Agent):
         else:
             self.collection_ratio = self.age/BEE_AGE_EXPERIENCE if self.age < BEE_AGE_EXPERIENCE else 1
 
+    def pesticideConfusion(self):
+        self.max_memory = floor(self.max_memory/2)
+        self.rewarded_memory = []
 
     def step(self):
         # simulare viaggi (ogni tot step, torna alla colonia e deposita polline e nettare)
-        if (self.model.schedule.steps % 4 == 0 and self.bee_type != BeeType.MALE):
+        # males never return to the colony
+        if (
+            (self.model.schedule.steps % STEPS_COLONY_RETURN == 0 and self.bee_type != BeeType.MALE) or
+            (self.pollen >= self.max_pollen_load)
+        ):
             self.returnToColonyStep()
         else:
             #colleziona polline e nettare dalla pianta in cui sono
@@ -85,22 +94,18 @@ class BeeAgent(Agent):
                 self.model.grid.move_agent(self, newPosition)
 
 
-        # TODO memoria del posto che ha dato maggior reward, ogni giorno si recano verso quell'aiuola, se non c'è cibo si spostano verso quella più vicina).
-
-
     def returnToColonyStep(self):
+        self.last_flower_position = self.pos
         self.colony.collectResources(self)
         self.nectar = 0
         self.initializePollen()
         self.model.grid.move_agent(self, self.colony.pos)
-        # TODO only when they are fully loaded, or they have traveled too much or its night.
-        # TODO colony uses the nectar in function of number of bees present.
         pass
 
     def dailyStep(self):
         self.age += 1
         self.updateCollectionRatio()
-        self.bee_stage = self.updateStage()
+        self.updateStage()
         if(self.bee_type == BeeType.QUEEN):
             if self.model.schedule.days % DAYS_PER_EGGS == 0:
                 self.createNewEggs()
@@ -199,6 +204,13 @@ class BeeAgent(Agent):
                     newPosition = plants_to_choose.pos
             else:
                 newPosition = neighbors[0].pos
+
+        elif self.last_flower_position is not None:
+            # vado nel posto in cui ero prima di tornare al nido
+            # simulo una memoria del posto che ha dato maggior reward, ogni volta che ritornano al nido per depositare le risorse,
+            # si recano successivamente verso quell'aiuola
+            newPosition = self.last_flower_position
+            
         return newPosition
 
     def getPlantMeanRewards(self):

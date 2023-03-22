@@ -1,7 +1,7 @@
 from mesa.model import Model
 from CustomMultiGrid import CustomMultiGrid
 from mesa import DataCollector
-from Utils import BeeType, BeeStage, PlantStage
+from Utils import BeeType, BeeStage, PlantStage, PlantType
 import math
 from CustomAgents.PlantAgent import PlantAgent
 from CustomAgents.BeeAgent import BeeAgent
@@ -10,6 +10,7 @@ from CustomTime import RandomActivationByTypeOrdered
 
 # TODO un possibile parametro è la forma dello sfalcio
 # TODO un altro parametro è la dezanzarizzazione, un obiettivo è la vivibilità del parco.
+# TODO simulare dezanzarizzazione, con conseguente stordimento del bombo
 
 STEPS_PER_DAY = 8
 
@@ -60,10 +61,10 @@ class GreenArea(Model):
             y = cell[2]
             if x >= x_min and x <= x_max and y >= y_min and y <= y_max and self.random.random() < self.plant_density:
                 if self.random.random() < 0.5:
-                    plant_type = 1
+                    plant_type = PlantType.TYPE2
                     reward = (0.4, 0.5)
                 else:
-                    plant_type = 0
+                    plant_type = PlantType.TYPE1
                     reward = (0.35, 0.55)
                     
                 agent = PlantAgent(self.plant_id, self, reward, plant_type)#, plant_stage=PlantStage.FLOWER)
@@ -76,7 +77,7 @@ class GreenArea(Model):
             ):
                 # metti i nidi dei bombi ai bordi del parco dove c'è il bosco 
                 colony_agent = ColonyAgent(self.bee_id, self)
-                queen_agent = BeeAgent(self.bee_id, self, self.plant_types_quantity, BeeType.QUEEN, BeeStage.BEE, colony_agent)
+                queen_agent = BeeAgent(self.bee_id, self, BeeType.QUEEN, BeeStage.BEE, colony_agent)
                 colony_agent.setQueen(queen_agent)
                 self.bee_id += 1
                 self.grid.place_agent(queen_agent, (x, y))
@@ -144,7 +145,7 @@ class GreenArea(Model):
 
     def createNewBumblebees(self, qty, bumblebee_type: BeeType, parent: BeeAgent):
         for _ in range (qty):
-            bumblebee = BeeAgent(self.bee_id, self, self.plant_types_quantity, bumblebee_type, BeeStage.EGG, parent.colony)
+            bumblebee = BeeAgent(self.bee_id, self, bumblebee_type, BeeStage.EGG, parent.colony)
             self.bee_id += 1
             self.grid.place_agent(bumblebee, parent.colony.pos)
             self.schedule.add(bumblebee)
