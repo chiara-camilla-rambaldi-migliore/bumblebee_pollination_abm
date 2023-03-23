@@ -8,7 +8,7 @@ POLLEN_STEP_RECHARGE = 0.1 #amount of recharge after a step
 SEED_AGE = 3 #maximum seed age before becoming a flower
 FLOWER_AGE = 10 #maximum flower age until death
 INITIAL_SEED_PROD_PROB = 0.1 #initial porbability of seed production (it takes into account the wind and rain pollination)
-MAX_SEEDS = 10 #maximum number of seeds producted by the flower
+MAX_SEEDS = 6 #maximum number of seeds producted by the flower
 SEED_PROB = 0.6 #probability of a seed to become a flower
 
 # seed hibernation is controlled by number of days a seed need to become a flower
@@ -48,8 +48,6 @@ class PlantAgent(mesa.Agent):
         # ogni giorno mi si ricarica il nettare e polline
         if self.plant_stage == PlantStage.FLOWER:
             self.completeResourcesRecharge()
-        elif self.plant_stage == PlantStage.DEATH and floor(MAX_SEEDS*self.seed_production_prob) > 0:
-            self.model.createNewFlowers(floor(MAX_SEEDS*self.seed_production_prob), self)
 
     def updateStage(self):
         if self.plant_stage == PlantStage.SEED:
@@ -63,11 +61,13 @@ class PlantAgent(mesa.Agent):
 
         elif self.plant_stage == PlantStage.FLOWER:
             if self.age >= FLOWER_AGE:
+                if floor(MAX_SEEDS*self.seed_production_prob) > 0:
+                    self.model.createNewFlowers(floor(MAX_SEEDS*self.seed_production_prob), self)
                 self.setPlantDead()
 
     def setPlantDead(self):
         self.plant_stage = PlantStage.DEATH
-        self.model.grid.remove_agent(self)
+        self.model.removeDeceasedAgent(self)
 
 
     def updateSeedProductionProb(self, bumblebee: mesa.Agent):
@@ -75,7 +75,7 @@ class PlantAgent(mesa.Agent):
         quantity_other_pollen = sum(bumblebee.pollen.values()) - quantity_same_pollen
     
         self.seed_production_prob = min(
-            ((quantity_same_pollen - quantity_other_pollen) / bumblebee.max_pollen_load) * 0.1, 
+            self.seed_production_prob + ((quantity_same_pollen - quantity_other_pollen) / bumblebee.max_pollen_load), 
             1
         )
 

@@ -5,13 +5,13 @@ from Utils import BeeStage, BeeType, PlantType
 
 DAYS_TILL_SAMPLING_MODE = 5
 QUEEN_FORAGING_DAYS = 15
-STEPS_COLONY_RETURN = 4 # should be a multiple of steps per day
+STEPS_COLONY_RETURN = 10 # should be a multiple of steps per day
 BEE_AGE_EXPERIENCE = 5
 MAX_POLLEN_LOAD = 20
 MALE_PERCENTAGE = 0.3
 NEW_QUEENS_PERCENTAGE = 0.1
 MAX_EGG = 20 #maximum number of eggs a queen can lay for every deposition
-DAYS_PER_EGGS = 20 #number of days between depositions of eggs
+DAYS_PER_EGGS = 10 #number of days between depositions of eggs
 QUEEN_MALE_PRODUCTION_PERIOD = 150 #number of days after queen dishibernation for males and queen production
 HIBERNATION_SURVIVAL_PROB = 0.8
 STAGE_DAYS = {
@@ -78,9 +78,8 @@ class BeeAgent(Agent):
         # simulare viaggi (ogni tot step, torna alla colonia e deposita polline e nettare)
         # males never return to the colony
         if (
-            (self.model.schedule.steps != 0)
-            (self.model.schedule.steps % STEPS_COLONY_RETURN == 0 and self.bee_type != BeeType.MALE) or
-            (self.pollen >= self.max_pollen_load)
+            (self.model.schedule.steps != 0 and self.model.schedule.steps % STEPS_COLONY_RETURN == 0 and self.bee_type != BeeType.MALE) or
+            (sum(self.pollen.values()) >= self.max_pollen_load)
         ):
             self.returnToColonyStep()
         else:
@@ -96,7 +95,9 @@ class BeeAgent(Agent):
 
 
     def returnToColonyStep(self):
-        self.last_flower_position = self.pos
+        plant_in_same_position = self.model.grid.get_cell_plant_list_contents(self.pos)
+        if len(plant_in_same_position) > 0:
+            self.last_flower_position = self.pos
         self.colony.collectResources(self)
         self.nectar = 0
         self.initializePollen()
@@ -166,7 +167,7 @@ class BeeAgent(Agent):
     def setBeeDead(self):
         self.plant_stage = BeeStage.DEATH
         self.colony.removeBee(self)
-        self.model.grid.remove_agent(self)
+        self.model.removeDeceasedAgent(self)
 
     def updatePollenNectarMemory(self):
         plant_in_same_position = self.model.grid.get_cell_plant_list_contents(self.pos)
@@ -201,7 +202,7 @@ class BeeAgent(Agent):
             if(not self.sampling_mode):
                 plantMeanRewards = self.getPlantMeanRewards()
                 if(len(plantMeanRewards) > 0):
-                    plantMaxReward = dict(filter(lambda pair: pair[1] > 0 in plant_types, plantMeanRewards.items())) #filtra per quelli > 0
+                    plantMaxReward = dict(filter(lambda pair: pair[1] > 0 and pair[0] in plant_types, plantMeanRewards.items())) #filtra per quelli > 0 e con plant type presente nel vicinato
                     plantMaxReward = [key for key, value in plantMaxReward.items() if value == max(plantMaxReward.values())]
                     if (max_rew_len := len(plantMaxReward)) > 0:
                         if max_rew_len > 1:
@@ -223,10 +224,7 @@ class BeeAgent(Agent):
             # vado nel posto in cui ero prima di tornare al nido
             # simulo una memoria del posto che ha dato maggior reward, ogni volta che ritornano al nido per depositare le risorse,
             # si recano successivamente verso quell'aiuola
-            newPosition = (
-                self.last_flower_position[0]+self.model.random.randrange(-2,2), 
-                self.last_flower_position[1]+self.model.random.randrange(-2,2)
-            )
+            newPosition = (self.last_flower_position)
             
             
         return newPosition

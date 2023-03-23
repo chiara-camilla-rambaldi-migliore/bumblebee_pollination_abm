@@ -12,7 +12,7 @@ from CustomTime import RandomActivationByTypeOrdered
 # TODO un altro parametro è la dezanzarizzazione, un obiettivo è la vivibilità del parco.
 # TODO simulare dezanzarizzazione, con conseguente stordimento del bombo
 
-STEPS_PER_DAY = 8
+STEPS_PER_DAY = 40
 
 def computeTotalPollen(model):
     total_pollen = 0
@@ -67,7 +67,7 @@ class GreenArea(Model):
                     plant_type = PlantType.TYPE1
                     reward = (0.35, 0.55)
                     
-                agent = PlantAgent(self.plant_id, self, reward, plant_type)#, plant_stage=PlantStage.FLOWER)
+                agent = PlantAgent(self.plant_id, self, reward, plant_type, plant_stage=PlantStage.FLOWER)
                 self.plant_id += 1
                 self.grid.place_agent(agent, (x, y))
                 self.schedule.add(agent)
@@ -109,7 +109,6 @@ class GreenArea(Model):
         self.schedule.step(self.type_ordered_keys)
         # TODO simulate seasons
         self.datacollector.collect(self)
-        self.removeDeceasedAgents()
         # TODO simulare taglio erba periodico
 
     def getCoordForPlants(self):
@@ -151,10 +150,6 @@ class GreenArea(Model):
             self.grid.place_agent(bumblebee, parent.colony.pos)
             self.schedule.add(bumblebee)
         
-    def removeDeceasedAgents(self):
-        for a in self.schedule.agents:
-            if (
-                (isinstance(a, PlantAgent) and a.plant_stage == PlantStage.DEATH) or
-                (isinstance(a, BeeAgent) and a.bee_stage == BeeStage.DEATH)
-            ):
-                self.schedule.remove(a)
+    def removeDeceasedAgent(self, agent):
+        self.grid.remove_agent(agent)
+        self.schedule.remove(agent)

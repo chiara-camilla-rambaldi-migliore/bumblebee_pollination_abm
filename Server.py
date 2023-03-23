@@ -105,7 +105,7 @@ nectar_chart = BeeNectarBarChart(
 server = mesa.visualization.ModularServer(
     GreenArea,
     #[canvas_element, total_pollen_chart, nectar_chart],
-    [canvas_element , nectar_chart],
+    [canvas_element],
     "GreenArea",
     model_params,
 )

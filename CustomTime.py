@@ -19,7 +19,7 @@ class RandomActivationByTypeOrdered(RandomActivationByType):
                             type group is shuffled.
             daily_step: How many steps 
         """
-        if self.daily_step != 0 and self.steps % self.daily_step == 0:
+        if self.daily_step != 0 and self.steps != 0 and self.steps % self.daily_step == 0:
             is_daily_step = True
         else: 
             is_daily_step = False
@@ -27,6 +27,10 @@ class RandomActivationByTypeOrdered(RandomActivationByType):
             self.step_type(agent_class, shuffle_agents=shuffle_agents)
             if is_daily_step:
                 self.daily_step_type(agent_class, shuffle_agents=shuffle_agents)
+                
+        if is_daily_step:
+            self.days += 1
+        
         self.steps += 1
         self.time += 1
 
@@ -43,5 +47,3 @@ class RandomActivationByTypeOrdered(RandomActivationByType):
             self.model.random.shuffle(agent_keys)
         for agent_key in agent_keys:
             self.agents_by_type[type_class][agent_key].dailyStep()
-
-        self.days += 1
