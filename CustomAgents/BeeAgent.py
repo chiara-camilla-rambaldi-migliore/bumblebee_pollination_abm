@@ -3,8 +3,7 @@ import numpy as np
 from math import floor
 from Utils import BeeStage, BeeType, PlantType
 
-# TODO sampling mode
-
+DAYS_TILL_SAMPLING_MODE = 5
 QUEEN_FORAGING_DAYS = 15
 STEPS_COLONY_RETURN = 4 # should be a multiple of steps per day
 BEE_AGE_EXPERIENCE = 5
@@ -45,7 +44,7 @@ class BeeAgent(Agent):
            max_memory: maximum number of reward remembered by the bee.
         """
         super().__init__(f"bee_{id}", model)
-        self.rewarded_memory = [] #list of tuple (plant_type, reward)
+        self.resetRewardedMemory() #list of tuple (plant_type, reward)
         self.bee_type = bee_type
         self.max_memory = max_memory
         self.last_flower_position = None
@@ -55,6 +54,7 @@ class BeeAgent(Agent):
         self.age = 0 #days
         self.mated = False
         self.bee_stage = bee_stage
+        self.sampling_mode = True
         self.max_pollen_load = MAX_POLLEN_LOAD
         self.initializePollen()
         self.updateCollectionRatio()
@@ -72,12 +72,13 @@ class BeeAgent(Agent):
 
     def pesticideConfusion(self):
         self.max_memory = floor(self.max_memory/2)
-        self.rewarded_memory = []
+        self.resetRewardedMemory()
 
     def step(self):
         # simulare viaggi (ogni tot step, torna alla colonia e deposita polline e nettare)
         # males never return to the colony
         if (
+            (self.model.schedule.steps != 0)
             (self.model.schedule.steps % STEPS_COLONY_RETURN == 0 and self.bee_type != BeeType.MALE) or
             (self.pollen >= self.max_pollen_load)
         ):
@@ -102,7 +103,13 @@ class BeeAgent(Agent):
         self.model.grid.move_agent(self, self.colony.pos)
         pass
 
+    def resetRewardedMemory(self):
+        self.rewarded_memory = []
+
     def dailyStep(self):
+        if(self.model.schedule.days % DAYS_TILL_SAMPLING_MODE == 0):
+            self.sampling_mode = True
+            self.resetRewardedMemory()
         self.age += 1
         self.updateCollectionRatio()
         self.updateStage()
@@ -158,6 +165,7 @@ class BeeAgent(Agent):
 
     def setBeeDead(self):
         self.plant_stage = BeeStage.DEATH
+        self.colony.removeBee(self)
         self.model.grid.remove_agent(self)
 
     def updatePollenNectarMemory(self):
@@ -169,6 +177,9 @@ class BeeAgent(Agent):
             self.pollen[plant.plant_type] += pollen_from_plant
             self.nectar += nectar_from_plant
             self.enqueueNewReward(plant.plant_type, nectar_from_plant)
+
+        if len(self.rewarded_memory) == self.max_memory:
+            self.sampling_mode = False
 
     def enqueueNewReward(self, plant_type, nectar_from_plant):
         self.rewarded_memory.append((plant_type, nectar_from_plant))
@@ -187,21 +198,24 @@ class BeeAgent(Agent):
         neighborhood = self.model.grid.get_neighborhood(self.pos, True, radius = 8)
         newPosition = neighborhood[np.random.randint(0, len(neighborhood))]
         if (len(neighbors) > 0):
-            plantMeanRewards = self.getPlantMeanRewards()
-            if(len(plantMeanRewards) > 0):
-                plantMaxReward = dict(filter(lambda pair: pair[1] > 0 in plant_types, plantMeanRewards.items())) #filtra per quelli > 0
-                plantMaxReward = [key for key, value in plantMaxReward.items() if value == max(plantMaxReward.values())]
-                if (max_rew_len := len(plantMaxReward)) > 0:
-                    if max_rew_len > 1:
-                        plantMaxReward = plantMaxReward[np.random.randint(0, max_rew_len)]
-                    else:
-                        plantMaxReward = plantMaxReward[0]
-                    plants_to_choose = list(filter(lambda n: n.plant_type == plantMaxReward, neighbors))
-                    if (plant_len := len(plants_to_choose)) > 1:
-                        plants_to_choose = plants_to_choose[np.random.randint(0, plant_len)]
-                    else:
-                        plants_to_choose = plants_to_choose[0]
-                    newPosition = plants_to_choose.pos
+            if(not self.sampling_mode):
+                plantMeanRewards = self.getPlantMeanRewards()
+                if(len(plantMeanRewards) > 0):
+                    plantMaxReward = dict(filter(lambda pair: pair[1] > 0 in plant_types, plantMeanRewards.items())) #filtra per quelli > 0
+                    plantMaxReward = [key for key, value in plantMaxReward.items() if value == max(plantMaxReward.values())]
+                    if (max_rew_len := len(plantMaxReward)) > 0:
+                        if max_rew_len > 1:
+                            plantMaxReward = plantMaxReward[np.random.randint(0, max_rew_len)]
+                        else:
+                            plantMaxReward = plantMaxReward[0]
+                        plants_to_choose = list(filter(lambda n: n.plant_type == plantMaxReward, neighbors))
+                        if (plant_len := len(plants_to_choose)) > 1:
+                            plants_to_choose = plants_to_choose[np.random.randint(0, plant_len)]
+                        else:
+                            plants_to_choose = plants_to_choose[0]
+                        newPosition = plants_to_choose.pos
+                else:
+                    newPosition = neighbors[0].pos
             else:
                 newPosition = neighbors[0].pos
 
@@ -209,7 +223,11 @@ class BeeAgent(Agent):
             # vado nel posto in cui ero prima di tornare al nido
             # simulo una memoria del posto che ha dato maggior reward, ogni volta che ritornano al nido per depositare le risorse,
             # si recano successivamente verso quell'aiuola
-            newPosition = self.last_flower_position
+            newPosition = (
+                self.last_flower_position[0]+self.model.random.randrange(-2,2), 
+                self.last_flower_position[1]+self.model.random.randrange(-2,2)
+            )
+            
             
         return newPosition
 

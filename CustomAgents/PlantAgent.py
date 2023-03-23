@@ -11,7 +11,8 @@ INITIAL_SEED_PROD_PROB = 0.1 #initial porbability of seed production (it takes i
 MAX_SEEDS = 10 #maximum number of seeds producted by the flower
 SEED_PROB = 0.6 #probability of a seed to become a flower
 
-# TODO seed hibernation
+# seed hibernation is controlled by number of days a seed need to become a flower
+# the assumption is that each plant type ha only one generation per year
 
 
 class PlantAgent(mesa.Agent):

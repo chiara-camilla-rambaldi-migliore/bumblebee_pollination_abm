@@ -146,6 +146,7 @@ class GreenArea(Model):
     def createNewBumblebees(self, qty, bumblebee_type: BeeType, parent: BeeAgent):
         for _ in range (qty):
             bumblebee = BeeAgent(self.bee_id, self, bumblebee_type, BeeStage.EGG, parent.colony)
+            parent.colony.addNewBee(bumblebee)
             self.bee_id += 1
             self.grid.place_agent(bumblebee, parent.colony.pos)
             self.schedule.add(bumblebee)
