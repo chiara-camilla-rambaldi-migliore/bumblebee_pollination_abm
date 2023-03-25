@@ -1,7 +1,7 @@
 from mesa.model import Model
 from CustomMultiGrid import CustomMultiGrid
 from mesa import DataCollector
-from Utils import BeeType, BeeStage, PlantStage, PlantType
+from Utils import BeeType, BeeStage, PlantStage, PlantType, AreaConstructor, FlowerAreaType
 import math
 from CustomAgents.PlantAgent import PlantAgent
 from CustomAgents.BeeAgent import BeeAgent
@@ -37,6 +37,8 @@ class GreenArea(Model):
         self.queens_density = queens_density
         self.no_mow_pc = no_mow_pc
 
+        self.areaConstructor = AreaConstructor(FlowerAreaType.WEST_SECTION, self.height, self.width, self.no_mow_pc)
+
         self.schedule = RandomActivationByTypeOrdered(self, STEPS_PER_DAY)
         self.grid = CustomMultiGrid(width, height, torus=False)
 
@@ -54,12 +56,11 @@ class GreenArea(Model):
         self.bee_id = 0
         self.plant_id = 0
         self.plant_types_quantity = 2
-        (x_min, y_min), (x_max, y_max) = self.getCoordForPlants()
-        (r_max, t_max, l_max, d_max), wood_surface = self.getWoodBoundsAndSurface()
+        (r_max, t_max, l_max, d_max), wood_surface = self.areaConstructor.getWoodBoundsAndSurface()
         for cell in self.grid.coord_iter():
             x = cell[1]
             y = cell[2]
-            if x >= x_min and x <= x_max and y >= y_min and y <= y_max and self.random.random() < self.plant_density:
+            if self.areaConstructor.isPointInFlowerArea((x,y)):
                 if self.random.random() < 0.5:
                     plant_type = PlantType.TYPE2
                     reward = (0.4, 0.5)
@@ -88,16 +89,6 @@ class GreenArea(Model):
         self.running = True
         self.datacollector.collect(self)
 
-    def getWoodBoundsAndSurface(self):
-        r_max = 5
-        t_max = 5
-        l_max = 5
-        d_max = 5
-
-        wood_surface = ((r_max+l_max)*self.height)+((t_max+d_max)*(self.width-l_max-r_max))
-
-        return (r_max, t_max, l_max, d_max), wood_surface
-
     def getOrderedKeys(self):
         return [BeeAgent, PlantAgent]
 
@@ -111,28 +102,13 @@ class GreenArea(Model):
         self.datacollector.collect(self)
         # TODO simulare taglio erba periodico
 
-    def getCoordForPlants(self):
-        (r_max, t_max, l_max, d_max), wood_surface = self.getWoodBoundsAndSurface()
-        total_area = (self.width*self.height)-wood_surface
-        no_mow_area = self.no_mow_pc*total_area
-        no_mow_area_height = math.floor(no_mow_area/(self.width-r_max-l_max))
-        return ((r_max,d_max), (self.width-1-l_max, no_mow_area_height-1+d_max))
-    
-    def getParkBoundaries(self):
-        (r_max, t_max, l_max, d_max), wood_surface = self.getWoodBoundsAndSurface()
-        total_area = (self.width*self.height)-wood_surface
-        area_height = math.floor(total_area/(self.width-r_max-l_max))
-        return ((r_max,d_max), (self.width-1-l_max, area_height-1+d_max))
-
     def createNewFlowers(self, qty, parent: PlantAgent):
         # TODO può avere senso partire dal neighborhood della pianta per far nascere i semi?
-        (x_min, y_min), (x_max, y_max) = self.getParkBoundaries()
         for cell in self.grid.coord_iter():
             x = cell[1]
             y = cell[2]
             if (
-                x >= x_min and x <= x_max and 
-                y >= y_min and y <= y_max and 
+                self.areaConstructor.isPointInParkBoundaries((x,y)) and 
                 self.grid.is_cell_suitable_for_seed((x,y)) and
                 qty > 0
             ):
