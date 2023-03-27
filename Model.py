@@ -8,11 +8,11 @@ from CustomAgents.BeeAgent import BeeAgent
 from CustomAgents.ColonyAgent import ColonyAgent
 from CustomTime import RandomActivationByTypeOrdered
 
-# TODO un possibile parametro è la forma dello sfalcio
-# TODO un altro parametro è la dezanzarizzazione, un obiettivo è la vivibilità del parco.
-# TODO simulare dezanzarizzazione, con conseguente stordimento del bombo
+# Un possibile parametro è la forma dello sfalcio
 
 STEPS_PER_DAY = 40
+MOWING_DAYS = 30
+PESTICIDE_DAYS = 60
 
 def computeTotalPollen(model):
     total_pollen = 0
@@ -37,7 +37,7 @@ class GreenArea(Model):
         self.queens_density = queens_density
         self.no_mow_pc = no_mow_pc
 
-        self.areaConstructor = AreaConstructor(FlowerAreaType.WEST_SECTION, self.height, self.width, self.no_mow_pc)
+        self.areaConstructor = AreaConstructor(FlowerAreaType.SOUTH_SECTION, self.height, self.width, self.no_mow_pc)
 
         self.schedule = RandomActivationByTypeOrdered(self, STEPS_PER_DAY)
         self.grid = CustomMultiGrid(width, height, torus=False)
@@ -78,19 +78,19 @@ class GreenArea(Model):
             ):
                 # metti i nidi dei bombi ai bordi del parco dove c'è il bosco 
                 colony_agent = ColonyAgent(self.bee_id, self)
-                queen_agent = BeeAgent(self.bee_id, self, BeeType.QUEEN, BeeStage.BEE, colony_agent)
-                colony_agent.setQueen(queen_agent)
+                queen_agent = BeeAgent(self.bee_id, self, BeeType.QUEEN, BeeStage.QUEEN, colony_agent)
                 self.bee_id += 1
                 self.grid.place_agent(queen_agent, (x, y))
                 self.grid.place_agent(colony_agent, (x, y))
                 self.schedule.add(queen_agent)
                 self.schedule.add(colony_agent)
+                colony_agent.setQueen(queen_agent)
 
         self.running = True
         self.datacollector.collect(self)
 
     def getOrderedKeys(self):
-        return [BeeAgent, PlantAgent]
+        return [BeeAgent, PlantAgent, ColonyAgent]
 
     def step(self):
         """
@@ -98,25 +98,44 @@ class GreenArea(Model):
         """
         # days are simulated in the schedule
         self.schedule.step(self.type_ordered_keys)
-        # TODO simulate seasons
+        # TODO capire se è possibile skippare l'inverno
         self.datacollector.collect(self)
-        # TODO simulare taglio erba periodico
+        if (self.schedule.days != 0):
+            # simulo taglio erba periodico
+            if (self.schedule.days % MOWING_DAYS == 0):
+                self.mowPark()
+            # dezanzarizzazione con conseguente stordimento del bombo
+            if (self.schedule.days % PESTICIDE_DAYS == 0):
+                for bumblebee in self.schedule.agents_by_type[BeeAgent]:
+                    if bumblebee.bee_stage == BeeStage.BEE and bumblebee.bee_type == BeeType.WORKER:
+                        bumblebee.pesticideConfusion()
 
-    def createNewFlowers(self, qty, parent: PlantAgent):
-        # TODO può avere senso partire dal neighborhood della pianta per far nascere i semi?
+
+    def mowPark(self):
         for cell in self.grid.coord_iter():
             x = cell[1]
             y = cell[2]
-            if (
-                self.areaConstructor.isPointInParkBoundaries((x,y)) and 
-                self.grid.is_cell_suitable_for_seed((x,y)) and
-                qty > 0
-            ):
-                agent = PlantAgent(self.plant_id, self, parent.reward, parent.plant_type)
-                qty -= 1
-                self.plant_id += 1
-                self.grid.place_agent(agent, (x, y))
-                self.schedule.add(agent)
+            if not self.areaConstructor.isPointInFlowerArea((x,y)):
+                plants = list(filter(lambda a: (isinstance(a, PlantAgent) and a.plant_stage == PlantStage.FLOWER), self.grid[x][y]))
+                for plant in plants:
+                    plant.setPlantDead()
+
+    def createNewFlowers(self, qty, parent: PlantAgent):
+        # parto dal neighborhood del fiore per mettere i semi
+        radius = 6
+        neighbors = self.grid.get_neighbor_cells_suitable_for_seeds(self.areaConstructor, parent.pos, True, radius = radius)
+        while len(neighbors) < qty:
+            radius += 1
+            neighbors = self.grid.get_neighbor_cells_suitable_for_seeds(self.areaConstructor, parent.pos, True, radius = radius)
+        
+        self.random.shuffle(neighbors)
+
+        for i in range(qty):
+            x, y = neighbors[i]
+            agent = PlantAgent(self.plant_id, self, parent.reward, parent.plant_type)
+            self.plant_id += 1
+            self.grid.place_agent(agent, (x, y))
+            self.schedule.add(agent)
 
     def createNewBumblebees(self, qty, bumblebee_type: BeeType, parent: BeeAgent):
         for _ in range (qty):

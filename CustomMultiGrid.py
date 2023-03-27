@@ -18,7 +18,29 @@ class CustomMultiGrid(MultiGrid):
             return False
             
         return True
-
+    
+    def get_neighbor_cells_suitable_for_seeds(
+        self,
+        areaConstructor,
+        pos: Coordinate,
+        moore: bool,
+        include_center: bool = False,
+        radius: int = 1
+    ) -> list[Coordinate]:
+        neighborhood = self.get_neighborhood(pos, moore, include_center, radius)
+        new_neighborhood = []
+        for cell in neighborhood:
+            x, y = cell
+            plants = list(filter(
+                lambda a: (
+                    isinstance(a, CustomAgents.PlantAgent) and 
+                    a.plant_stage != PlantStage.DEATH
+                ), 
+                self.grid[x][y]
+            ))
+            if len(plants) == 0 and areaConstructor.isPointInParkBoundaries((x,y)):
+                new_neighborhood.append(cell)
+        return new_neighborhood
 
     def get_custom_neighbors(
         self,

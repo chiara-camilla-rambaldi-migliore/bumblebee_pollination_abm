@@ -1,13 +1,17 @@
 import mesa
+from Utils import BeeStage
 
 class ColonyAgent(mesa.Agent):
     def __init__(self, id, model):
         super().__init__(f"colony_{id}", model)
         self.nectar = 0
         self.pollen = 0
-        self.nectar_consumption_per_bee = 1.5
-        self.pollen_consumption_per_bee = 1.5
+        self.nectar_consumption_per_bee = 0.5
+        self.pollen_consumption_per_bee = 0.5
         self.population = {}
+
+    def __del__(self):
+        print(f"Colony {self.unique_id} died")
 
     def setQueen(self, queen: mesa.Agent):
         self.queen = queen
@@ -16,8 +20,21 @@ class ColonyAgent(mesa.Agent):
     def step(self):
         pass
 
-    def daily_step(self):
+    def dailyStep(self):
         self.useResources()
+        if (self.pollen > 0 and self.nectar < 0):
+            self.no_resource_days = 0
+        else:
+            self.no_resource_days += 1
+
+        if (self.no_resource_days > 4):
+            # quando è in deficit di risorse da tot giorni, la colonia muore
+            for bumblebee in self.population.values():
+                bumblebee.bee_stage = BeeStage.DEATH
+                self.model.removeDeceasedAgent(bumblebee)
+            
+            self.model.removeDeceasedAgent(self)
+
 
     def removeBee(self, agent: mesa.Agent):
         self.population.pop(agent.unique_id)

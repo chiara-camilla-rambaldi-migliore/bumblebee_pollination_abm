@@ -24,6 +24,7 @@ STAGE_DAYS = {
         BeeType.MALE: 10,
         BeeType.QUEEN: 15
     },
+    BeeStage.QUEEN: 180,
     BeeStage.HIBERNATION: 180
 }
 
@@ -56,9 +57,13 @@ class BeeAgent(Agent):
         self.bee_stage = bee_stage
         self.sampling_mode = True
         self.max_pollen_load = MAX_POLLEN_LOAD
+        self.confused = False
         self.initializePollen()
         self.updateCollectionRatio()
-
+    
+    def __del__(self):
+        print("Deleted bumblebee", self.unique_id, self.bee_type.name)
+    
     def initializePollen(self):
         for type in PlantType:
             self.pollen[type] = 0
@@ -73,6 +78,7 @@ class BeeAgent(Agent):
     def pesticideConfusion(self):
         self.max_memory = floor(self.max_memory/2)
         self.resetRewardedMemory()
+        self.confused = True
 
     def step(self):
         # simulare viaggi (ogni tot step, torna alla colonia e deposita polline e nettare)
@@ -86,8 +92,10 @@ class BeeAgent(Agent):
             #colleziona polline e nettare dalla pianta in cui sono
             # foraging workers, males and new queens
             if(
-                (self.bee_type != BeeType.NEST_BEE and self.bee_stage == BeeStage.BEE) or
-                (self.bee_type == BeeType.QUEEN and self.age < QUEEN_FORAGING_DAYS and self.bee_stage == BeeStage.QUEEN)
+                ((self.bee_type != BeeType.NEST_BEE and self.bee_stage == BeeStage.BEE) or
+                (self.bee_type == BeeType.QUEEN and self.age < QUEEN_FORAGING_DAYS and self.bee_stage == BeeStage.QUEEN)) and
+                ((not self.confused) or self.model.schedule.steps % 2 == 0)
+
             ):
                 self.updatePollenNectarMemory()
                 newPosition = self.getNewPosition()
@@ -115,22 +123,26 @@ class BeeAgent(Agent):
         self.updateCollectionRatio()
         self.updateStage()
         if(self.bee_type == BeeType.QUEEN):
-            if self.model.schedule.days % DAYS_PER_EGGS == 0:
+            if self.age % DAYS_PER_EGGS == 0:
                 self.createNewEggs()
 
     def createNewEggs(self):
+        # TODO basare produzione uova su quantità di risorse nella colonia
         prob = self.model.random.randrange(6,10)/10
         eggs = floor(prob * MAX_EGG)
         if self.age  < QUEEN_MALE_PRODUCTION_PERIOD:
             self.model.createNewBumblebees(eggs, BeeType.WORKER, self)
         else:
             male_eggs = floor(MALE_PERCENTAGE*eggs)
+            # TODO basare quantità nuove regine su quantità risorse nella colonia
             new_queen_eggs = floor(NEW_QUEENS_PERCENTAGE*eggs)
             eggs = eggs - male_eggs - new_queen_eggs
 
             self.model.createNewBumblebees(eggs, BeeType.WORKER, self)
             self.model.createNewBumblebees(male_eggs, BeeType.MALE, self)
+            print("created males", male_eggs)
             self.model.createNewBumblebees(new_queen_eggs, BeeType.QUEEN, self)
+            print("created new queens", new_queen_eggs)
 
     def updateStage(self):
         if self.bee_stage == BeeStage.EGG:
@@ -155,9 +167,15 @@ class BeeAgent(Agent):
                 else:
                     self.bee_stage =  BeeStage.DEATH
                     self.setBeeDead()
-                
+
+        elif self.bee_stage == BeeStage.QUEEN:  
+            if self.age >= STAGE_DAYS[BeeStage.QUEEN]:
+                self.bee_stage =  BeeStage.DEATH
+                self.setBeeDead()
+        
         elif self.bee_stage == BeeStage.HIBERNATION:
             if self.age >= STAGE_DAYS[BeeStage.HIBERNATION]:
+                # TODO survival based on resources loaded
                 if(self.model.random.random() < HIBERNATION_SURVIVAL_PROB):
                     self.age = 0
                     self.bee_stage =  BeeStage.QUEEN
