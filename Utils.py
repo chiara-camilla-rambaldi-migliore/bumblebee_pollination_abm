@@ -1,6 +1,11 @@
 from enum import Enum
 from math import floor, sqrt, pi
 
+class ColonySize(Enum):
+    SMALL = 1
+    MEDIUM = 2
+    BIG = 3
+
 class PlantStage(Enum):
     SEED = 1
     FLOWER = 2

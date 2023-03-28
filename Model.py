@@ -106,7 +106,7 @@ class GreenArea(Model):
                 self.mowPark()
             # dezanzarizzazione con conseguente stordimento del bombo
             if (self.schedule.days % PESTICIDE_DAYS == 0):
-                for bumblebee in self.schedule.agents_by_type[BeeAgent]:
+                for bumblebee in self.schedule.agents_by_type[BeeAgent].values():
                     if bumblebee.bee_stage == BeeStage.BEE and bumblebee.bee_type == BeeType.WORKER:
                         bumblebee.pesticideConfusion()
 
@@ -124,9 +124,13 @@ class GreenArea(Model):
         # parto dal neighborhood del fiore per mettere i semi
         radius = 6
         neighbors = self.grid.get_neighbor_cells_suitable_for_seeds(self.areaConstructor, parent.pos, True, radius = radius)
-        while len(neighbors) < qty:
+
+        while len(neighbors) < qty and radius < 10:
+            print("infinite loop potential")
             radius += 1
             neighbors = self.grid.get_neighbor_cells_suitable_for_seeds(self.areaConstructor, parent.pos, True, radius = radius)
+        
+        qty = min(len(neighbors), qty)
         
         self.random.shuffle(neighbors)
 

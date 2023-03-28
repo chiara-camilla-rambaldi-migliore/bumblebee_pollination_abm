@@ -7,7 +7,7 @@ NECTAR_STEP_RECHARGE = 0.1 #amount of recharge after a step
 POLLEN_STEP_RECHARGE = 0.1 #amount of recharge after a step
 SEED_AGE = 3 #maximum seed age before becoming a flower
 FLOWER_AGE = 30 #maximum flower age until death
-INITIAL_SEED_PROD_PROB = 0.1 #initial porbability of seed production (it takes into account the wind and rain pollination)
+INITIAL_SEED_PROD_PROB = 0.2 #initial probability of seed production (it takes into account the wind and rain pollination)
 MAX_SEEDS = 6 #maximum number of seeds producted by the flower
 SEED_PROB = 0.6 #probability of a seed to become a flower
 
@@ -72,7 +72,7 @@ class PlantAgent(mesa.Agent):
 
     def updateSeedProductionProb(self, bumblebee: mesa.Agent):
         quantity_same_pollen = bumblebee.pollen[self.plant_type]
-        quantity_other_pollen = (sum(bumblebee.pollen.values()) - quantity_same_pollen)/2
+        quantity_other_pollen = (sum(bumblebee.pollen.values()) - quantity_same_pollen) #TODO control plausibility
     
         self.seed_production_prob = min(
             self.seed_production_prob + ((quantity_same_pollen - quantity_other_pollen) / bumblebee.max_pollen_load), 

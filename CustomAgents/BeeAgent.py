@@ -1,9 +1,9 @@
 from mesa.agent import Agent
 import numpy as np
 from math import floor
-from Utils import BeeStage, BeeType, PlantType
+from Utils import BeeStage, BeeType, PlantType, ColonySize
 
-DAYS_TILL_SAMPLING_MODE = 5
+DAYS_TILL_SAMPLING_MODE = 3
 QUEEN_FORAGING_DAYS = 15
 STEPS_COLONY_RETURN = 10 # should be a multiple of steps per day
 BEE_AGE_EXPERIENCE = 5
@@ -13,7 +13,7 @@ NEW_QUEENS_PERCENTAGE = 0.1
 MAX_EGG = 20 #maximum number of eggs a queen can lay for every deposition
 DAYS_PER_EGGS = 10 #number of days between depositions of eggs
 QUEEN_MALE_PRODUCTION_PERIOD = 150 #number of days after queen dishibernation for males and queen production
-HIBERNATION_SURVIVAL_PROB = 0.8
+HIBERNATION_RESOURCES = (100, 100)
 STAGE_DAYS = {
     BeeStage.EGG: 4,
     BeeStage.LARVAE: 4,
@@ -29,6 +29,8 @@ STAGE_DAYS = {
 }
 
 DAYS_BEFORE_HIBERNATION = 10
+
+# TODO mating
 
 class BeeAgent(Agent):
     """
@@ -62,7 +64,7 @@ class BeeAgent(Agent):
         self.updateCollectionRatio()
     
     def __del__(self):
-        print("Deleted bumblebee", self.unique_id, self.bee_type.name)
+        pass#print("Deleted bumblebee", self.unique_id, self.bee_type.name)
     
     def initializePollen(self):
         for type in PlantType:
@@ -106,9 +108,12 @@ class BeeAgent(Agent):
         plant_in_same_position = self.model.grid.get_cell_plant_list_contents(self.pos)
         if len(plant_in_same_position) > 0:
             self.last_flower_position = self.pos
-        self.colony.collectResources(self)
-        self.nectar = 0
-        self.initializePollen()
+        if(not (self.bee_type == BeeType.QUEEN and self.bee_stage == BeeStage.BEE) and
+           not (self.bee_type == BeeType.MALE and self.bee_stage == BeeStage.BEE)
+        ):
+            self.colony.collectResources(self)
+            self.nectar = 0
+            self.initializePollen()
         self.model.grid.move_agent(self, self.colony.pos)
         pass
 
@@ -122,20 +127,43 @@ class BeeAgent(Agent):
         self.age += 1
         self.updateCollectionRatio()
         self.updateStage()
-        if(self.bee_type == BeeType.QUEEN):
+        if(self.bee_type == BeeType.QUEEN and self.bee_stage == BeeStage.QUEEN):
             if self.age % DAYS_PER_EGGS == 0:
                 self.createNewEggs()
 
+        if(self.bee_type == BeeType.MALE and self.bee_stage == BeeStage.BEE):
+            self.mating()
+
+    def mating(self):
+        # TODO check plausibility
+        available_queens = list(filter(lambda a: a.bee_type == BeeType.QUEEN and a.bee_stage == BeeStage.BEE and (not a.mated), self.model.schedule.agents_by_type[BeeAgent].values()))
+        if len(available_queens > 0):
+            self.model.random.shuffle(available_queens)
+            queen = available_queens.pop()
+            queen.mated = True
+
     def createNewEggs(self):
-        # TODO basare produzione uova su quantità di risorse nella colonia
-        prob = self.model.random.randrange(6,10)/10
-        eggs = floor(prob * MAX_EGG)
+        #produzione uova basata su quantità di risorse nella colonia
+        (colony_nectar, colony_pollen) = self.colony.getResources()
+        (nect_cons, pol_cons) = self.colony.getConsumption()
+        eggs = min(min(colony_nectar/(20*nect_cons), MAX_EGG), min(colony_pollen/(20*pol_cons), MAX_EGG))
+        print(f"producing {eggs} eggs")
         if self.age  < QUEEN_MALE_PRODUCTION_PERIOD:
             self.model.createNewBumblebees(eggs, BeeType.WORKER, self)
         else:
-            male_eggs = floor(MALE_PERCENTAGE*eggs)
-            # TODO basare quantità nuove regine su quantità risorse nella colonia
-            new_queen_eggs = floor(NEW_QUEENS_PERCENTAGE*eggs)
+            # quantità nuove regine basata su quantità workers nella colonia
+            if self.colony.getSize() == ColonySize.SMALL:
+                male_percentage = 0
+                new_queens_percentage = 0
+            elif self.colony.getSize() == ColonySize.MEDIUM:
+                male_percentage = MALE_PERCENTAGE
+                new_queens_percentage = 0
+            elif self.colony.getSize() == ColonySize.BIG:
+                male_percentage = MALE_PERCENTAGE
+                new_queens_percentage = NEW_QUEENS_PERCENTAGE
+
+            male_eggs = floor(male_percentage*eggs)
+            new_queen_eggs = floor(new_queens_percentage*eggs)
             eggs = eggs - male_eggs - new_queen_eggs
 
             self.model.createNewBumblebees(eggs, BeeType.WORKER, self)
@@ -175,8 +203,10 @@ class BeeAgent(Agent):
         
         elif self.bee_stage == BeeStage.HIBERNATION:
             if self.age >= STAGE_DAYS[BeeStage.HIBERNATION]:
-                # TODO survival based on resources loaded
-                if(self.model.random.random() < HIBERNATION_SURVIVAL_PROB):
+                # survival based on resources loaded
+                # TODO check plausibility
+                print("resources: ", self.nectar, sum(self.pollen.values()))
+                if(self.nectar >= HIBERNATION_RESOURCES[0] and sum(self.pollen.values()) < HIBERNATION_RESOURCES[1]):
                     self.age = 0
                     self.bee_stage =  BeeStage.QUEEN
                 else:
