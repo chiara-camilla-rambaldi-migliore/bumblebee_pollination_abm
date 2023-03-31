@@ -2,13 +2,14 @@ import mesa
 import numpy as np
 from Utils import PlantStage, PlantType
 from math import floor
+from typing import Tuple
 
-NECTAR_STEP_RECHARGE = 0.1 #amount of recharge after a step
-POLLEN_STEP_RECHARGE = 0.1 #amount of recharge after a step
+NECTAR_STEP_RECHARGE = 0.02 #amount of recharge after a step
+POLLEN_STEP_RECHARGE = 0.02 #amount of recharge after a step
 SEED_AGE = 3 #maximum seed age before becoming a flower
 FLOWER_AGE = 30 #maximum flower age until death
 INITIAL_SEED_PROD_PROB = 0.2 #initial probability of seed production (it takes into account the wind and rain pollination)
-MAX_SEEDS = 6 #maximum number of seeds producted by the flower
+MAX_SEEDS = 6 #maximum number of seeds produced by the flower
 SEED_PROB = 0.6 #probability of a seed to become a flower
 
 # seed hibernation is controlled by number of days a seed need to become a flower
@@ -16,7 +17,7 @@ SEED_PROB = 0.6 #probability of a seed to become a flower
 
 
 class PlantAgent(mesa.Agent):
-    def __init__(self, id, model: mesa.Model, reward, plant_type: PlantType, plant_stage = PlantStage.SEED, nectar_storage = 100, pollen_storage = 100):
+    def __init__(self, id, model: mesa.Model, reward: Tuple[float, float], plant_type: PlantType, plant_stage = PlantStage.SEED, nectar_storage = 100, pollen_storage = 100):
         super().__init__(f"plant_{id}", model)
         self.reward = reward
         self.plant_type = plant_type

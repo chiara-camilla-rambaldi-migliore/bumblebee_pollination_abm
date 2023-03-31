@@ -1,6 +1,9 @@
 import mesa
 from Utils import BeeStage, ColonySize
 
+DAYS_TILL_DEATH = 4
+
+
 class ColonyAgent(mesa.Agent):
     def __init__(self, id, model):
         super().__init__(f"colony_{id}", model)
@@ -12,7 +15,7 @@ class ColonyAgent(mesa.Agent):
         self.no_resource_days = 0
 
     def __del__(self):
-        print(f"Colony {self.unique_id} died")
+        pass#print(f"Colony {self.unique_id} died")
 
     def setQueen(self, queen: mesa.Agent):
         self.queen = queen
@@ -28,7 +31,7 @@ class ColonyAgent(mesa.Agent):
         else:
             self.no_resource_days += 1
 
-        if (self.no_resource_days > 4):
+        if (self.no_resource_days > DAYS_TILL_DEATH):
             # quando è in deficit di risorse da tot giorni, la colonia muore
             for bumblebee in self.population.values():
                 bumblebee.bee_stage = BeeStage.DEATH
@@ -39,6 +42,7 @@ class ColonyAgent(mesa.Agent):
 
     def removeBee(self, agent: mesa.Agent):
         self.population.pop(agent.unique_id)
+        #TODO when no more bees, the colony die
         pass
 
     def addNewBee(self, agent: mesa.Agent):
@@ -66,4 +70,5 @@ class ColonyAgent(mesa.Agent):
         elif len(self.population) < 300:
             return ColonySize.MEDIUM
         else:
+            # succesful colonies reach 500 bumblebees
             return ColonySize.BIG

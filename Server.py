@@ -1,7 +1,7 @@
 import mesa
 import random
 from Model import GreenArea
-from CustomAgents import PlantAgent, BeeAgent, ColonyAgent
+from CustomAgents import PlantAgent, BeeAgent, ColonyAgent, TreeAgent
 from Utils import BeeStage, BeeType, PlantStage, PlantType
 from CustomModularServer import CustomModularServer
 
@@ -34,15 +34,17 @@ def agents_draw(agent):
             portrayal["Color"] = ["#3366FF"]
     elif isinstance(agent, BeeAgent):
         if agent.bee_type == BeeType.QUEEN:
-            portrayal = {"Shape": "circle", "r": 0.5, "Filled": "true", "Layer": 0, "Color": ["#FFCC00"]}
+            portrayal = {"Shape": "circle", "r": 0.5, "Filled": "true", "Layer": 2, "Color": "#FFCC00"}
         elif agent.bee_type == BeeType.WORKER:
-            portrayal = {"Shape": "circle", "r": 0.5, "Filled": "true", "Layer": 0, "Color": ["#FEEA00"]}
+            portrayal = {"Shape": "circle", "r": 0.5, "Filled": "true", "Layer": 2, "Color": "#FEEA00"}
         elif agent.bee_type == BeeType.MALE:
-            portrayal = {"Shape": "circle", "r": 0.4, "Filled": "true", "Layer": 0, "Color": ["#FFDC00"]}
+            portrayal = {"Shape": "circle", "r": 0.4, "Filled": "true", "Layer": 2, "Color": "#FFDC00"}
         elif agent.bee_type == BeeType.NEST_BEE:
-            portrayal = {"Shape": "circle", "r": 0.3, "Filled": "true", "Layer": 0, "Color": ["#FFF000"]}
+            portrayal = {"Shape": "circle", "r": 0.3, "Filled": "true", "Layer": 2, "Color": "#FFF000"}
     elif isinstance(agent, ColonyAgent):
-        portrayal = {"Shape": "circle", "r": 0.5, "Filled": "true", "Layer": 0, "Color": "#993300"}
+        portrayal = {"Shape": "circle", "r": 0.5, "Filled": "true", "Layer": 1, "Color": "#993300"}
+    elif isinstance(agent, TreeAgent):
+        portrayal = {"Shape": "rect", "h": 1, "w": 1, "Filled": "true", "Layer": 0, "Color": "#009900"}
     return portrayal
 
 def new_agents_draw(agent):

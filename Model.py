@@ -2,10 +2,7 @@ from mesa.model import Model
 from CustomMultiGrid import CustomMultiGrid
 from mesa import DataCollector
 from Utils import BeeType, BeeStage, PlantStage, PlantType, AreaConstructor, FlowerAreaType
-import math
-from CustomAgents.PlantAgent import PlantAgent
-from CustomAgents.BeeAgent import BeeAgent
-from CustomAgents.ColonyAgent import ColonyAgent
+from CustomAgents import PlantAgent, BeeAgent, ColonyAgent, TreeAgent
 from CustomTime import RandomActivationByTypeOrdered
 
 # Un possibile parametro è la forma dello sfalcio
@@ -55,6 +52,8 @@ class GreenArea(Model):
         # its contents. (coord_iter)
         self.bee_id = 0
         self.plant_id = 0
+        self.colony_id = 0
+        self.tree_id = 0
         self.plant_types_quantity = 2
         (r_max, t_max, l_max, d_max), wood_surface = self.areaConstructor.getWoodBoundsAndSurface()
         for cell in self.grid.coord_iter():
@@ -73,19 +72,26 @@ class GreenArea(Model):
                 self.grid.place_agent(agent, (x, y))
                 self.schedule.add(agent)
             if (
-                (x <= r_max-1 or x >= self.width-l_max-1 or y <= d_max-1 or y >= self.height-l_max-1) and 
-                self.random.random() < self.queens_density
+                (x <= r_max-1 or x >= self.width-l_max or y <= d_max-1 or y >= self.height-l_max)
             ):
-                # metti i nidi dei bombi ai bordi del parco dove c'è il bosco 
-                colony_agent = ColonyAgent(self.bee_id, self)
-                queen_agent = BeeAgent(self.bee_id, self, BeeType.QUEEN, BeeStage.QUEEN, colony_agent)
-                self.bee_id += 1
-                self.grid.place_agent(queen_agent, (x, y))
-                self.grid.place_agent(colony_agent, (x, y))
-                self.schedule.add(queen_agent)
-                self.schedule.add(colony_agent)
-                colony_agent.setQueen(queen_agent)
+                if (self.random.random() < self.queens_density):
+                    # metti i nidi dei bombi ai bordi del parco dove c'è il bosco 
+                    colony_agent = ColonyAgent(self.colony_id, self)
+                    queen_agent = BeeAgent(self.bee_id, self, BeeType.QUEEN, BeeStage.QUEEN, colony_agent)
+                    self.bee_id += 1
+                    self.colony_id += 1
+                    self.grid.place_agent(queen_agent, (x, y))
+                    self.grid.place_agent(colony_agent, (x, y))
+                    self.schedule.add(queen_agent)
+                    self.schedule.add(colony_agent)
+                    colony_agent.setQueen(queen_agent)
 
+                # solo per poter disegnare il bosco
+                tree_agent = TreeAgent(self.tree_id, self)
+                self.grid.place_agent(tree_agent, (x, y))
+                self.schedule.add(tree_agent)
+                self.tree_id += 1
+                
         self.running = True
         self.datacollector.collect(self)
 
@@ -152,3 +158,4 @@ class GreenArea(Model):
     def removeDeceasedAgent(self, agent):
         self.grid.remove_agent(agent)
         self.schedule.remove(agent)
+        print(f"{BeeAgent.__name__} {agent.unique_id} died")
