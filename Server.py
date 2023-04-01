@@ -6,61 +6,40 @@ from Utils import BeeStage, BeeType, PlantStage, PlantType
 from CustomModularServer import CustomModularServer
 
 
-PORTRAYAL_BEE = {
-    BeeType.MALE: {"Shape": "circle", "r": 0.4, "Filled": "true", "Layer": 0, "Color": ["#FFDC00"]},
-    BeeType.NEST_BEE: {"Shape": "circle", "r": 0.3, "Filled": "true", "Layer": 0, "Color": ["#FFF000"]},
-    BeeType.WORKER: {"Shape": "circle", "r": 0.3, "Filled": "true", "Layer": 0, "Color": ["#FEEA00"]},
-    BeeType.QUEEN: {"Shape": "circle", "r": 0.5, "Filled": "true", "Layer": 0, "Color": ["#FFCC00"]}
-}
-PORTRAYAL_FLOWER = {
-    PlantType.TYPE1: {'Shape': 'circle', 'r': 0.3, 'Filled': 'true', 'Layer': 0, 'Color': ['#FF5050']},
-    PlantType.TYPE2: {'Shape': 'circle', 'r': 0.3, 'Filled': 'true', 'Layer': 0, 'Color': ['#3366FF']}
-}
-
 def agents_draw(agent):
+    portrayal_bee = {
+        BeeType.MALE: {"Shape": "circle", "r": 0.4, "Filled": "true", "Layer": 1, "Color": "#FFDC00"},
+        BeeType.NEST_BEE: {"Shape": "circle", "r": 0.3, "Filled": "true", "Layer": 1, "Color": "#FFF000"},
+        BeeType.WORKER: {"Shape": "circle", "r": 0.4, "Filled": "true", "Layer": 1, "Color": "#FEEA00"},
+        BeeType.QUEEN: {"Shape": "circle", "r": 0.5, "Filled": "true", "Layer": 2, "Color": "#FFCC00"}
+    }
+    portrayal_flower = {
+        PlantStage.SEED: {
+            PlantType.TYPE1: {"Shape": "circle", "r": 0.3, "Filled": "true", "Layer": 0, 'Color': '#222200'},
+            PlantType.TYPE2: {"Shape": "circle", "r": 0.3, "Filled": "true", "Layer": 0, 'Color': '#222200'}
+        },
+        PlantStage.FLOWER: {
+            PlantType.TYPE1: {'Shape': 'circle', 'r': 0.3, 'Filled': 'true', 'Layer': 0, 'Color': '#FF5050'},
+            PlantType.TYPE2: {'Shape': 'circle', 'r': 0.3, 'Filled': 'true', 'Layer': 0, 'Color': '#3366FF'}
+        }
+    }
+    portrayal_colony = {"Shape": "circle", "r": 0.5, "Filled": "true", "Layer": 1, "Color": "#993300"}
+    portrayal_tree = {"Shape": "rect", "h": 1, "w": 1, "Filled": "true", "Layer": 0, "Color": "#009900"}
+
     """
     Portrayal Method for canvas
     """
     if agent is None:
         return
-    portrayal = {"Shape": "circle", "r": 0.3, "Filled": "true", "Layer": 0}
 
     if isinstance(agent, PlantAgent):
-        if agent.plant_stage == PlantStage.SEED:
-            portrayal["Color"] = ['#222200']
-        elif agent.plant_type == PlantType.TYPE1:
-            portrayal["Color"] = ["#FF5050"]
-        else:
-            portrayal["Color"] = ["#3366FF"]
+        portrayal = portrayal_flower[agent.plant_stage][agent.plant_type]
     elif isinstance(agent, BeeAgent):
-        if agent.bee_type == BeeType.QUEEN:
-            portrayal = {"Shape": "circle", "r": 0.5, "Filled": "true", "Layer": 2, "Color": "#FFCC00"}
-        elif agent.bee_type == BeeType.WORKER:
-            portrayal = {"Shape": "circle", "r": 0.5, "Filled": "true", "Layer": 2, "Color": "#FEEA00"}
-        elif agent.bee_type == BeeType.MALE:
-            portrayal = {"Shape": "circle", "r": 0.4, "Filled": "true", "Layer": 2, "Color": "#FFDC00"}
-        elif agent.bee_type == BeeType.NEST_BEE:
-            portrayal = {"Shape": "circle", "r": 0.3, "Filled": "true", "Layer": 2, "Color": "#FFF000"}
+        portrayal = portrayal_bee[agent.bee_type]
     elif isinstance(agent, ColonyAgent):
-        portrayal = {"Shape": "circle", "r": 0.5, "Filled": "true", "Layer": 1, "Color": "#993300"}
-    elif isinstance(agent, TreeAgent):
-        portrayal = {"Shape": "rect", "h": 1, "w": 1, "Filled": "true", "Layer": 0, "Color": "#009900"}
-    return portrayal
-
-def new_agents_draw(agent):
-    # TODO fix colors
-    """
-    Portrayal Method for canvas
-    """
-    if agent is None:
-        return
-    
-    portrayal = {}
-
-    if isinstance(agent, PlantAgent):
-        portrayal = PORTRAYAL_FLOWER[agent.plant_type]
-    elif isinstance(agent, BeeAgent):
-        portrayal = PORTRAYAL_BEE[agent.bee_type]
+        portrayal = portrayal_colony
+    else:
+        portrayal = portrayal_tree
 
     return portrayal
 
