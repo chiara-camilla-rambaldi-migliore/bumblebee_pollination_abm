@@ -33,12 +33,14 @@ class ColonyAgent(mesa.Agent):
 
         if (self.no_resource_days > DAYS_TILL_DEATH):
             # quando è in deficit di risorse da tot giorni, la colonia muore
-            for bumblebee in self.population.values():
-                bumblebee.bee_stage = BeeStage.DEATH
-                self.model.removeDeceasedAgent(bumblebee)
-            self.population = {}
-            self.model.removeDeceasedAgent(self)
+            self.setColonyDead()
 
+    def setColonyDead(self):
+        for bumblebee in self.population.values():
+            bumblebee.bee_stage = BeeStage.DEATH
+            self.model.removeDeceasedAgent(bumblebee)
+        self.population = {}
+        self.model.removeDeceasedAgent(self)
 
     def removeBee(self, agent: mesa.Agent):
         self.population.pop(agent.unique_id)
@@ -65,9 +67,9 @@ class ColonyAgent(mesa.Agent):
     
     def getSize(self):
         # TODO check plausibility
-        if len(self.population) < 100:
+        if len(self.population) < 90:
             return ColonySize.SMALL
-        elif len(self.population) < 300:
+        elif len(self.population) < 180:
             return ColonySize.MEDIUM
         else:
             # succesful colonies reach 500 bumblebees

@@ -199,7 +199,7 @@ class GreenArea(Model):
         neighbors = self.grid.get_neighbor_cells_suitable_for_seeds(self.areaConstructor, parent.pos, True, radius = radius)
 
         while len(neighbors) < qty and radius < 10:
-            print("infinite loop potential")
+            #print("infinite loop potential")
             radius += 1
             neighbors = self.grid.get_neighbor_cells_suitable_for_seeds(self.areaConstructor, parent.pos, True, radius = radius)
         
@@ -225,4 +225,5 @@ class GreenArea(Model):
     def removeDeceasedAgent(self, agent):
         self.grid.remove_agent(agent)
         self.schedule.remove(agent)
-        print(f"{BeeAgent.__name__} {agent.unique_id} died")
+        if(isinstance(agent, ColonyAgent)):
+            print(f"Colony {agent.unique_id} died")

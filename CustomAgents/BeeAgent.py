@@ -4,19 +4,18 @@ from math import floor
 from Utils import BeeStage, BeeType, PlantType, ColonySize
 
 DAYS_TILL_SAMPLING_MODE = 3
-QUEEN_FORAGING_DAYS = 18
 STEPS_COLONY_RETURN = 10 # should be a multiple of steps per day
 BEE_AGE_EXPERIENCE = 5
 MAX_POLLEN_LOAD = 20
 MALE_PERCENTAGE = 0.3
-NEW_QUEENS_PERCENTAGE = 0.1
+NEW_QUEENS_PERCENTAGE = 0.3
 NEST_BEES_PERCENTAGE = 0.3
 #Generally, between 8 and 16 eggs are laid in this first batch.
 # When the first batch of larvae pupate (and hence no longer need feeding), 
 # the queen will generally collect more pollen and lay further batches of eggs
-MAX_EGG = 8 #maximum number of eggs a queen can lay for every deposition
-#TODO update the parameter based on the lifecycle of the queen (early first batch, then another batch when the first pupate and when the workers are out, the queen lay a lot of batch)
-DAYS_PER_EGGS = 18 #number of days between depositions of eggs
+MAX_EGG = 12 #maximum number of eggs a queen can lay for every deposition
+#update the parameter based on the lifecycle of the queen (early first batch, then another batch when the first pupate and when the workers are out, the queen lay a lot of batch)
+DAYS_PER_EGGS = 5 #number of days between depositions of eggs
 # In some species, such as the buff-tailed bumblebee (Bombus terrestris), 
 # the production of reproductive brood may not occur until several months after the queen has established her nest.
 QUEEN_MALE_PRODUCTION_PERIOD = 150 #number of days after queen dishibernation for males and queen production
@@ -29,16 +28,16 @@ STAGE_DAYS = {
         # Estimates of worker longevity also vary between species and between studies, 
         # from 13.2 days for B. terricola  to 41.3 days for B. morio  (Chapter 5)
         # 3 to 6 weeks for B. Terrestris
-        BeeType.WORKER: 20,
+        BeeType.WORKER: 25,
         BeeType.NEST_BEE: 30,
         BeeType.MALE: 10,
         BeeType.QUEEN: 15
     },
     BeeStage.QUEEN: 160, #almost all the season, then will die or killed from workers
-    BeeStage.HIBERNATION: 180
+    BeeStage.HIBERNATION: 5
 }
 
-DAYS_BEFORE_HIBERNATION = 10
+QUEEN_FORAGING_DAYS = DAYS_PER_EGGS + STAGE_DAYS[BeeStage.EGG] + STAGE_DAYS[BeeStage.LARVAE] + STAGE_DAYS[BeeStage.PUPA]
 # TODO skippa l'inverno facendo si che l'ibernazione duri pochissimo (giusto un periodo di transizione per il modello)
 
 class BeeAgent(Agent):
@@ -68,6 +67,9 @@ class BeeAgent(Agent):
         self.bee_stage = bee_stage
         self.sampling_mode = True
         self.max_pollen_load = MAX_POLLEN_LOAD
+        self.days_per_eggs = DAYS_PER_EGGS
+        self.days_since_last_egg_batch = 0
+        self.batch_laid = 0
         self.confused = False
         self.initializePollen()
         self.updateCollectionRatio()
@@ -81,13 +83,13 @@ class BeeAgent(Agent):
 
     def updateCollectionRatio(self):
         # il polline e nettare collezionato aumenta con l'età
-        if self.bee_type == BeeType.QUEEN:
+        if self.bee_type == BeeType.QUEEN and self.bee_stage == BeeStage.QUEEN:
             self.collection_ratio = 1
         else:
             self.collection_ratio = self.age/BEE_AGE_EXPERIENCE if self.age < BEE_AGE_EXPERIENCE else 1
 
     def pesticideConfusion(self):
-        print(f"Bumblebee {self.unique_id} confused")
+        #print(f"Bumblebee {self.unique_id} confused")
         self.max_memory = floor(self.max_memory/2)
         self.resetRewardedMemory()
         self.confused = True
@@ -113,7 +115,6 @@ class BeeAgent(Agent):
                 newPosition = self.getNewPosition()
                 self.model.grid.move_agent(self, newPosition)
 
-
     def returnToColonyStep(self):
         plant_in_same_position = self.model.grid.get_cell_plant_list_contents(self.pos)
         if len(plant_in_same_position) > 0:
@@ -138,26 +139,40 @@ class BeeAgent(Agent):
         self.updateCollectionRatio()
         self.updateStage()
         if(self.bee_type == BeeType.QUEEN and self.bee_stage == BeeStage.QUEEN):
-            if self.age % DAYS_PER_EGGS == 0:
+            self.days_since_last_egg_batch += 1
+            if self.days_since_last_egg_batch % self.days_per_eggs == 0:
                 self.createNewEggs()
+                self.updateDaysPerEgg()
 
         if(self.bee_type == BeeType.MALE and self.bee_stage == BeeStage.BEE):
             self.mating()
 
+    def updateDaysPerEgg(self):
+        if (self.batch_laid == 1):
+            self.days_per_eggs = STAGE_DAYS[BeeStage.EGG]+ STAGE_DAYS[BeeStage.LARVAE]
+        elif (self.batch_laid > 1 and self.batch_laid <= 5):
+            self.days_per_eggs = 5
+        elif (self.batch_laid > 5 and self.batch_laid <= 35):
+            self.days_per_eggs = 3
+        elif (self.batch_laid > 35):
+            self.days_per_eggs = 6
+
     def mating(self):
         # TODO check plausibility
         available_queens = list(filter(lambda a: a.bee_type == BeeType.QUEEN and a.bee_stage == BeeStage.BEE and (not a.mated), self.model.schedule.agents_by_type[BeeAgent].values()))
-        if len(available_queens > 0):
+        if len(available_queens) > 0:
             self.model.random.shuffle(available_queens)
             queen = available_queens.pop()
             queen.mated = True
 
     def createNewEggs(self):
+        self.batch_laid += 1
+        self.days_since_last_egg_batch = 0
         #produzione uova basata su quantità di risorse nella colonia
         (colony_nectar, colony_pollen) = self.colony.getResources()
         (nect_cons, pol_cons) = self.colony.getConsumption()
         eggs = floor(min(min(colony_nectar/(20*nect_cons), MAX_EGG), min(colony_pollen/(20*pol_cons), MAX_EGG)))
-        print(f"producing {eggs} eggs")
+        print(f"producing {eggs} eggs at age {self.age} with days per egg = {self.days_per_eggs}")
         if self.age  < QUEEN_MALE_PRODUCTION_PERIOD:
             nest_bee_eggs = floor(NEST_BEES_PERCENTAGE*eggs)
             worker_eggs = eggs-nest_bee_eggs
@@ -185,6 +200,9 @@ class BeeAgent(Agent):
             self.model.createNewBumblebees(new_queen_eggs, BeeType.QUEEN, self)
             print("created new queens", new_queen_eggs)
 
+        
+        print(f"colony size: {len(self.colony.population)}")
+
     def updateStage(self):
         if self.bee_stage == BeeStage.EGG:
             if self.age >= STAGE_DAYS[BeeStage.EGG]:
@@ -205,6 +223,7 @@ class BeeAgent(Agent):
             if self.age >= STAGE_DAYS[BeeStage.BEE][self.bee_type]:
                 if(self.bee_type == BeeType.QUEEN and self.mated):
                     self.bee_stage = BeeStage.HIBERNATION
+                    print(f"New queen {self.unique_id} is hibernating")
                 else:
                     self.bee_stage =  BeeStage.DEATH
                     self.setBeeDead()
@@ -213,6 +232,7 @@ class BeeAgent(Agent):
             if self.age >= STAGE_DAYS[BeeStage.QUEEN]:
                 self.bee_stage =  BeeStage.DEATH
                 self.setBeeDead()
+                self.colony.setColonyDead()
         
         elif self.bee_stage == BeeStage.HIBERNATION:
             if self.age >= STAGE_DAYS[BeeStage.HIBERNATION]:
@@ -220,6 +240,7 @@ class BeeAgent(Agent):
                 # TODO check plausibility
                 print("resources: ", self.nectar, sum(self.pollen.values()))
                 if(self.nectar >= HIBERNATION_RESOURCES[0] and sum(self.pollen.values()) < HIBERNATION_RESOURCES[1]):
+                    print(f"queen {self.unique_id} starts new colony")
                     self.age = 0
                     #TODO new colony in random position
                     self.bee_stage =  BeeStage.QUEEN
