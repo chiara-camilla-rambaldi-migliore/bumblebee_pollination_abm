@@ -165,3 +165,17 @@ class AreaConstructor():
 
     def isPointInParkBoundaries(self, point):
         return self.inside_square(point, self.parkBoundaries[0], self.parkBoundaries[1])
+    
+    def getRandomPositionInWoods(self, random):
+        (r_max, t_max, l_max, d_max), wood_surface = self.getWoodBoundsAndSurface()
+        if random.random() < 0.5:
+            x = random.randint(self.width-r_max, self.width-1)
+        else: 
+            x = random.randint(0, l_max-1)
+
+        if random.random() < 0.5:
+            y = random.randint(self.height-t_max, self.height-1)
+        else: 
+            y = random.randint(0, d_max-1)
+        
+        return (x,y)

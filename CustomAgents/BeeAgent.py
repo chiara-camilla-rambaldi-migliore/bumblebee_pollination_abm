@@ -19,7 +19,7 @@ DAYS_PER_EGGS = 5 #number of days between depositions of eggs
 # In some species, such as the buff-tailed bumblebee (Bombus terrestris), 
 # the production of reproductive brood may not occur until several months after the queen has established her nest.
 QUEEN_MALE_PRODUCTION_PERIOD = 150 #number of days after queen dishibernation for males and queen production
-HIBERNATION_RESOURCES = (100, 100)
+HIBERNATION_RESOURCES = (15, 15)
 STAGE_DAYS = {
     BeeStage.EGG: 4,
     BeeStage.LARVAE: 14, #10-14 days
@@ -86,7 +86,7 @@ class BeeAgent(Agent):
         if self.bee_type == BeeType.QUEEN and self.bee_stage == BeeStage.QUEEN:
             self.collection_ratio = 1
         else:
-            self.collection_ratio = self.age/BEE_AGE_EXPERIENCE if self.age < BEE_AGE_EXPERIENCE else 1
+            self.collection_ratio = (self.age+1)/BEE_AGE_EXPERIENCE if self.age < BEE_AGE_EXPERIENCE else 1
 
     def pesticideConfusion(self):
         #print(f"Bumblebee {self.unique_id} confused")
@@ -95,25 +95,26 @@ class BeeAgent(Agent):
         self.confused = True
 
     def step(self):
-        # simulare viaggi (ogni tot step, torna alla colonia e deposita polline e nettare)
-        # males never return to the colony
-        if (
-            (self.model.schedule.steps != 0 and self.model.schedule.steps % STEPS_COLONY_RETURN == 0 and self.bee_type != BeeType.MALE) or
-            (sum(self.pollen.values()) >= self.max_pollen_load)
-        ):
-            self.returnToColonyStep()
-        else:
-            #colleziona polline e nettare dalla pianta in cui sono
-            # foraging workers, males and new queens
-            if(
-                ((self.bee_type != BeeType.NEST_BEE and self.bee_stage == BeeStage.BEE) or
-                (self.bee_type == BeeType.QUEEN and self.age < QUEEN_FORAGING_DAYS and self.bee_stage == BeeStage.QUEEN)) and
-                ((not self.confused) or self.model.schedule.steps % 2 == 0)
-
+        if(self.bee_stage != BeeStage.HIBERNATION):
+            # simulare viaggi (ogni tot step, torna alla colonia e deposita polline e nettare)
+            # males never return to the colony
+            if (
+                (self.model.schedule.steps != 0 and self.model.schedule.steps % STEPS_COLONY_RETURN == 0 and self.bee_type != BeeType.MALE) or
+                (sum(self.pollen.values()) >= self.max_pollen_load)
             ):
-                self.updatePollenNectarMemory()
-                newPosition = self.getNewPosition()
-                self.model.grid.move_agent(self, newPosition)
+                self.returnToColonyStep()
+            else:
+                #colleziona polline e nettare dalla pianta in cui sono
+                # foraging workers, males and new queens
+                if(
+                    ((self.bee_type != BeeType.NEST_BEE and self.bee_stage == BeeStage.BEE) or
+                    (self.bee_type == BeeType.QUEEN and self.age < QUEEN_FORAGING_DAYS and self.bee_stage == BeeStage.QUEEN)) and
+                    ((not self.confused) or self.model.schedule.steps % 2 == 0)
+
+                ):
+                    self.updatePollenNectarMemory()
+                    newPosition = self.getNewPosition()
+                    self.model.grid.move_agent(self, newPosition)
 
     def returnToColonyStep(self):
         plant_in_same_position = self.model.grid.get_cell_plant_list_contents(self.pos)
@@ -132,20 +133,21 @@ class BeeAgent(Agent):
         self.rewarded_memory = []
 
     def dailyStep(self):
-        if(self.model.schedule.days % DAYS_TILL_SAMPLING_MODE == 0):
-            self.sampling_mode = True
-            self.resetRewardedMemory()
         self.age += 1
-        self.updateCollectionRatio()
         self.updateStage()
-        if(self.bee_type == BeeType.QUEEN and self.bee_stage == BeeStage.QUEEN):
-            self.days_since_last_egg_batch += 1
-            if self.days_since_last_egg_batch % self.days_per_eggs == 0:
-                self.createNewEggs()
-                self.updateDaysPerEgg()
+        if(self.bee_stage != BeeStage.HIBERNATION):
+            if(self.model.schedule.days % DAYS_TILL_SAMPLING_MODE == 0):
+                self.sampling_mode = True
+                self.resetRewardedMemory()
+            self.updateCollectionRatio()
+            if(self.bee_type == BeeType.QUEEN and self.bee_stage == BeeStage.QUEEN):
+                self.days_since_last_egg_batch += 1
+                if self.days_since_last_egg_batch % self.days_per_eggs == 0:
+                    self.createNewEggs()
+                    self.updateDaysPerEgg()
 
-        if(self.bee_type == BeeType.MALE and self.bee_stage == BeeStage.BEE):
-            self.mating()
+            if(self.bee_type == BeeType.MALE and self.bee_stage == BeeStage.BEE):
+                self.mating()
 
     def updateDaysPerEgg(self):
         if (self.batch_laid == 1):
@@ -223,6 +225,7 @@ class BeeAgent(Agent):
             if self.age >= STAGE_DAYS[BeeStage.BEE][self.bee_type]:
                 if(self.bee_type == BeeType.QUEEN and self.mated):
                     self.bee_stage = BeeStage.HIBERNATION
+                    self.age = 0
                     print(f"New queen {self.unique_id} is hibernating")
                 else:
                     self.bee_stage =  BeeStage.DEATH
@@ -232,17 +235,20 @@ class BeeAgent(Agent):
             if self.age >= STAGE_DAYS[BeeStage.QUEEN]:
                 self.bee_stage =  BeeStage.DEATH
                 self.setBeeDead()
-                self.colony.setColonyDead()
+                #self.colony.setColonyDead()
         
         elif self.bee_stage == BeeStage.HIBERNATION:
             if self.age >= STAGE_DAYS[BeeStage.HIBERNATION]:
                 # survival based on resources loaded
                 # TODO check plausibility
                 print("resources: ", self.nectar, sum(self.pollen.values()))
-                if(self.nectar >= HIBERNATION_RESOURCES[0] and sum(self.pollen.values()) < HIBERNATION_RESOURCES[1]):
+                if(self.nectar >= HIBERNATION_RESOURCES[0] and sum(self.pollen.values()) >= HIBERNATION_RESOURCES[1]):
                     print(f"queen {self.unique_id} starts new colony")
                     self.age = 0
-                    #TODO new colony in random position
+                    # new colony in random position
+                    colony = self.model.createNewColony(self)
+                    self.colony = colony
+                    self.model.grid.move_agent(self, self.colony.pos)
                     self.bee_stage =  BeeStage.QUEEN
                 else:
                     self.setBeeDead()

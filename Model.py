@@ -131,7 +131,7 @@ class GreenArea(Model):
                 self.grid.place_agent(agent, (x, y))
                 self.schedule.add(agent)
             if (
-                (x <= r_max-1 or x >= self.width-l_max or y <= d_max-1 or y >= self.height-l_max)
+                (x <= l_max-1 or x >= self.width-r_max or y <= d_max-1 or y >= self.height-t_max)
             ):
                 if (self.random.random() < self.queens_density):
                     # metti i nidi dei bombi ai bordi del parco dove c'è il bosco 
@@ -221,6 +221,21 @@ class GreenArea(Model):
             self.bee_id += 1
             self.grid.place_agent(bumblebee, parent.colony.pos)
             self.schedule.add(bumblebee)
+
+    def createNewColony(self, queen):
+        pos = self.areaConstructor.getRandomPositionInWoods(self.random)
+        lambda_func = lambda a: not isinstance(a, TreeAgent)
+        agents_same_pos = self.grid.get_cell_custom_list_contents(lambda_func, pos)
+        while (len(agents_same_pos) > 0):
+            print("possible infinite loop")
+            pos = self.areaConstructor.getRandomPositionInWoods(self.random)
+        
+        colony_agent = ColonyAgent(self.colony_id, self)
+        self.colony_id += 1
+        self.grid.place_agent(colony_agent, pos)  
+        self.schedule.add(colony_agent)
+        colony_agent.setQueen(queen)
+        return colony_agent
         
     def removeDeceasedAgent(self, agent):
         self.grid.remove_agent(agent)

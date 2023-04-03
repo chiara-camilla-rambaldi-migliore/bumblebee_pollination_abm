@@ -44,12 +44,12 @@ class ColonyAgent(mesa.Agent):
 
     def removeBee(self, agent: mesa.Agent):
         self.population.pop(agent.unique_id)
-        #TODO when no more bees, the colony die
-        pass
+        if(len(self.population) == 0):
+            # when no more bees, the colony die
+            self.setColonyDead
 
     def addNewBee(self, agent: mesa.Agent):
         self.population[agent.unique_id] = agent
-        pass
 
     def useResources(self):
         self.nectar -= len(self.population)*self.nectar_consumption_per_bee
