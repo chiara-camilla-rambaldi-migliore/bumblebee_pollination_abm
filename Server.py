@@ -56,45 +56,31 @@ model_params = {
 }
 
 total_pollen_chart = mesa.visualization.ChartModule(
-    [{"Label": "Total pollen", "Color": "Blue"}],
-    data_collector_name='datacollector'
+    [{"Label": "Intra/inter pollen", "Color": "Blue"}],
+    data_collector_name='datacollector_bumblebees'
 )
 
-class BeeNectarBarChart(mesa.visualization.BarChartModule):
-    def __init__(
-        self,
-        fields,
-        scope="model",
-        sorting="none",
-        sort_by="none",
-        canvas_height=400,
-        canvas_width=800,
-        data_collector_name="datacollector",
-    ):
-        super().__init__(fields, scope, sorting, sort_by, canvas_height, canvas_width, data_collector_name)
 
-    def render(self, model):
-        current_values = []
-        data_collector = getattr(model, self.data_collector_name)
+seed_prob_chart = mesa.visualization.ChartModule(
+    [{"Label": "Seed Probability", "Color": "Res"}],
+    data_collector_name='datacollector_plants'
+)
 
-        df = data_collector.get_agent_vars_dataframe().astype("float")
-        latest_step = df.index.levels[0][-1]
-        labelStrings = [f["Label"] for f in self.fields]
-        dic = df.loc[latest_step].T.loc[labelStrings].to_dict()
-        dic = dict(filter(lambda el: "bee" in el[0],dic.items()))
-        current_values = list(dic.values())
-        return current_values
-
-nectar_chart = BeeNectarBarChart(
-    [{"Label": "Nectar", "Color": f"#00ffcc"}],
+nectar_chart = mesa.visualization.BarChartModule(
+    [{"Label": "Nectar", "Color": f"#00ffcc"}, {"Label": "Pollen", "Color": f"#ff0066"}],
     scope="agent",
-    data_collector_name='datacollector'
+    data_collector_name='datacollector_colonies'
+)
+
+plant_pollen_average = mesa.visualization.ChartModule(
+    [{"Label": "Plant Nectar Average", "Color": "#00ffcc"}, {"Label": "Plant Pollen Average", "Color": "#ff0066"}],
+    data_collector_name='datacollector_plants'
 )
 
 server = CustomModularServer(
     GreenArea,
-    #[canvas_element, total_pollen_chart, nectar_chart],
     [canvas_element],
+    #[canvas_element, total_pollen_chart, seed_prob_chart, plant_pollen_average, nectar_chart],
     "GreenArea",
     model_params,
     verbose=False,

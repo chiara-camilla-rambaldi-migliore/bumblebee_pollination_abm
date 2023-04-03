@@ -5,7 +5,7 @@ from mesa.agent import Agent
 class RandomActivationByTypeOrdered(RandomActivationByType):
     def __init__(self, model: Model, daily_step: int = 0) -> None:
         super().__init__(model)
-        self.days = 0
+        self.days = 1
         self.daily_step = daily_step
 
     def step(self, type_ordered_keys: list[type[Agent]], shuffle_agents: bool = True) -> None:
@@ -42,6 +42,8 @@ class RandomActivationByTypeOrdered(RandomActivationByType):
         Args:
             type_class: Class object of the type to run.
         """
+        self.model.dailyStep()
+        
         agent_keys: list[int] = list(self.agents_by_type[type_class].keys())
         if shuffle_agents:
             self.model.random.shuffle(agent_keys)

@@ -48,7 +48,7 @@ class PlantAgent(mesa.Agent):
         self.updateStage()
         # ogni giorno mi si ricarica il nettare e polline
         if self.plant_stage == PlantStage.FLOWER:
-            self.completeResourcesRecharge()
+            self.dailyResourcesRecharge()
 
     def updateStage(self):
         if self.plant_stage == PlantStage.SEED:
@@ -86,8 +86,8 @@ class PlantAgent(mesa.Agent):
         if(self.pollen_storage<self.max_pollen_storage):
             self.pollen_storage = min(self.pollen_storage + amountPollen, self.max_pollen_storage)
 
-    def completeResourcesRecharge(self):
-        self.resourcesRecharge(self.max_nectar_storage, self.max_pollen_storage)
+    def dailyResourcesRecharge(self):
+        self.resourcesRecharge(NECTAR_STEP_RECHARGE*20, POLLEN_STEP_RECHARGE*20)
 
     '''
     Returns nectar reward based on its minimum and maximum reward. 

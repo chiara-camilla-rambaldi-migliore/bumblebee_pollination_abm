@@ -87,6 +87,7 @@ class BeeAgent(Agent):
             self.collection_ratio = self.age/BEE_AGE_EXPERIENCE if self.age < BEE_AGE_EXPERIENCE else 1
 
     def pesticideConfusion(self):
+        print(f"Bumblebee {self.unique_id} confused")
         self.max_memory = floor(self.max_memory/2)
         self.resetRewardedMemory()
         self.confused = True

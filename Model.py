@@ -1,9 +1,10 @@
 from mesa.model import Model
 from CustomMultiGrid import CustomMultiGrid
-from mesa import DataCollector
 from Utils import BeeType, BeeStage, PlantStage, PlantType, AreaConstructor, FlowerAreaType
 from CustomAgents import PlantAgent, BeeAgent, ColonyAgent, TreeAgent
 from CustomTime import RandomActivationByTypeOrdered
+from CustomDataCollector import CustomDataCollector
+from math import log
 
 # Un possibile parametro è la forma dello sfalcio
 
@@ -11,13 +12,57 @@ STEPS_PER_DAY = 40
 MOWING_DAYS = 30
 PESTICIDE_DAYS = 60
 
-def computeTotalPollen(model):
-    total_pollen = 0
-    for agent in model.schedule.agents:
-        if isinstance(agent, BeeAgent):
-            for pollen in agent.pollen.values():
-                total_pollen += pollen
-    return total_pollen
+def computeIntraInterPollen(model):
+    rs = []
+    for agent in model.schedule.agents_by_type[BeeAgent].values():
+        types = {}
+        for t in PlantType:
+            types[t] = 0
+
+        for t, _ in agent.rewarded_memory:
+            types[t] += 1
+
+        max_types = len(PlantType)
+        max_length = agent.max_memory
+        average = max_length/max_types
+        r = 0
+        if(sum(types.values()) == 0):
+            rs.append(r)
+        else:
+            for value in types.values():
+                r += abs(value-average)
+            rs.append(r)
+    return sum(rs)/len(rs) if len(rs) > 0 else 0
+
+def computeSeedProducingProbability(model):
+    probs = 0
+    count = 0
+    for agent in model.schedule.agents_by_type[PlantAgent].values():
+        if agent.plant_stage == PlantStage.FLOWER:
+            probs += agent.seed_production_prob
+            count += 1
+        
+    return probs/count if count > 0 else 0
+
+def computPlantNectarAverage(model):
+    nectar = 0
+    count = 0
+    for agent in model.schedule.agents_by_type[PlantAgent].values():
+        if agent.plant_stage == PlantStage.FLOWER:
+            nectar += agent.nectar_storage
+            count += 1
+        
+    return nectar/count if count > 0 else 0
+
+def computPlantPollenAverage(model):
+    pollen = 0
+    count = 0
+    for agent in model.schedule.agents_by_type[PlantAgent].values():
+        if agent.plant_stage == PlantStage.FLOWER:
+            pollen += agent.pollen_storage
+            count += 1
+        
+    return pollen/count if count > 0 else 0
 
 class GreenArea(Model):
     """
@@ -39,10 +84,24 @@ class GreenArea(Model):
         self.schedule = RandomActivationByTypeOrdered(self, STEPS_PER_DAY)
         self.grid = CustomMultiGrid(width, height, torus=False)
 
-        self.datacollector = DataCollector(
-            #model_reporters={"Total pollen": computeTotalPollen},
+        self.datacollector_colonies = CustomDataCollector(
+            [ColonyAgent],
             agent_reporters={
-                "Nectar": lambda agent: agent.nectar if isinstance(agent, BeeAgent) else None
+                "Nectar": "nectar",
+                "Pollen": "pollen"
+            }
+        )
+        self.datacollector_bumblebees = CustomDataCollector(
+            [BeeAgent],
+            model_reporters={"Intra/inter pollen": computeIntraInterPollen},
+        )
+
+        self.datacollector_plants = CustomDataCollector(
+            [PlantAgent],
+            model_reporters={
+                "Seed Probability": computeSeedProducingProbability,
+                "Plant Nectar Average": computPlantNectarAverage,
+                "Plant Pollen Average": computPlantPollenAverage
             }
         )
 
@@ -93,7 +152,10 @@ class GreenArea(Model):
                 self.tree_id += 1
                 
         self.running = True
-        self.datacollector.collect(self)
+
+        self.datacollector_colonies.collect(self)
+        self.datacollector_bumblebees.collect(self)
+        self.datacollector_plants.collect(self)
 
     def getOrderedKeys(self):
         return [BeeAgent, PlantAgent, ColonyAgent]
@@ -105,7 +167,7 @@ class GreenArea(Model):
         # days are simulated in the schedule
         self.schedule.step(self.type_ordered_keys)
         # TODO capire se è possibile skippare l'inverno
-        self.datacollector.collect(self)
+        
         if (self.schedule.days != 0):
             # simulo taglio erba periodico
             if (self.schedule.days % MOWING_DAYS == 0):
@@ -115,7 +177,12 @@ class GreenArea(Model):
                 for bumblebee in self.schedule.agents_by_type[BeeAgent].values():
                     if bumblebee.bee_stage == BeeStage.BEE and bumblebee.bee_type == BeeType.WORKER:
                         bumblebee.pesticideConfusion()
+            
+        self.datacollector_bumblebees.collect(self)
+        self.datacollector_plants.collect(self)
 
+    def dailyStep(self):
+        self.datacollector_colonies.collect(self)
 
     def mowPark(self):
         for cell in self.grid.coord_iter():
