@@ -22,6 +22,7 @@ class CustomMultiGrid(MultiGrid):
     def get_neighbor_cells_suitable_for_seeds(
         self,
         areaConstructor,
+        plantType,
         pos: Coordinate,
         moore: bool,
         include_center: bool = False,
@@ -34,7 +35,8 @@ class CustomMultiGrid(MultiGrid):
             plants = list(filter(
                 lambda a: (
                     isinstance(a, CustomAgents.PlantAgent) and 
-                    a.plant_stage != PlantStage.DEATH
+                    a.plant_stage == PlantStage.SEED and
+                    a.plant_type == plantType
                 ), 
                 self.grid[x][y]
             ))

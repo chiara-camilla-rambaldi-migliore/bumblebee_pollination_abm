@@ -1,5 +1,6 @@
 from enum import Enum
 from math import floor, sqrt, pi
+from typing import Tuple
 
 class ColonySize(Enum):
     SMALL = 1
@@ -28,8 +29,15 @@ class BeeStage(Enum):
     QUEEN = 7
     
 class PlantType(Enum):
-    TYPE1 = 1
-    TYPE2 = 2
+    SPRING_TYPE1 = 1
+    SPRING_TYPE2 = 2
+    SPRING_TYPE3 = 3
+    SUMMER_TYPE1 = 4
+    SUMMER_TYPE2 = 5
+    SUMMER_TYPE3 = 6
+    AUTUMN_TYPE1 = 7
+    AUTUMN_TYPE2 = 8
+    AUTUMN_TYPE3 = 9
 
 class FlowerAreaType(Enum):
     CENTER_SQUARE = 1
@@ -126,7 +134,7 @@ class AreaConstructor():
         distance = sqrt(dx*dx + dy*dy)
         return distance <= radius
     
-    def inside_square(self, point, left_down, right_up):
+    def inside_square(self, point: Tuple[int, int], left_down: Tuple[int, int], right_up: Tuple[int, int]):
         if ((point[0] >= left_down[0] and point[0] <= right_up[0]) and
             (point[1] >= left_down[1] and point[1] <= right_up[1])):
             return True
@@ -158,7 +166,7 @@ class AreaConstructor():
     def isPointInFlowerArea7(self, point):
         return self.inside_square(point, self.coords[0], self.coords[1])
     
-    def getParkBoundaries(self):
+    def getParkBoundaries(self) -> Tuple[Tuple[int,int], Tuple[int,int]]:
         (r_max, t_max, l_max, d_max), _ = self.getWoodBoundsAndSurface()
         return ((l_max,d_max), (self.width-1-r_max, self.height-1-t_max))
 
@@ -166,16 +174,25 @@ class AreaConstructor():
     def isPointInParkBoundaries(self, point):
         return self.inside_square(point, self.parkBoundaries[0], self.parkBoundaries[1])
     
+    def isPointInWoodsArea(self, point: Tuple[int, int]):
+        (r_max, t_max, l_max, d_max), wood_surface = self.getWoodBoundsAndSurface()
+        x, y = point
+        return (x <= l_max-1 or x >= self.width-r_max or y <= d_max-1 or y >= self.height-t_max)
+
     def getRandomPositionInWoods(self, random):
         (r_max, t_max, l_max, d_max), wood_surface = self.getWoodBoundsAndSurface()
-        if random.random() < 0.5:
+        rand = random.random()
+        if rand < 0.25:
             x = random.randint(self.width-r_max, self.width-1)
-        else: 
+            y = random.randint(0, self.height-1)
+        elif rand < 0.5: 
             x = random.randint(0, l_max-1)
-
-        if random.random() < 0.5:
+            y = random.randint(0, self.height-1)
+        elif rand < 0.75:
+            x = random.randint(0, self.width-1)
             y = random.randint(self.height-t_max, self.height-1)
         else: 
+            x = random.randint(0, self.width-1)
             y = random.randint(0, d_max-1)
         
         return (x,y)

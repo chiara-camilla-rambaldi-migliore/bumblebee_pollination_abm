@@ -6,6 +6,7 @@ class RandomActivationByTypeOrdered(RandomActivationByType):
     def __init__(self, model: Model, daily_step: int = 0) -> None:
         super().__init__(model)
         self.days = 1
+        self.years = 0
         self.daily_step = daily_step
 
     def step(self, type_ordered_keys: list[type[Agent]], shuffle_agents: bool = True) -> None:
@@ -29,7 +30,12 @@ class RandomActivationByTypeOrdered(RandomActivationByType):
                 self.daily_step_type(agent_class, shuffle_agents=shuffle_agents)
                 
         if is_daily_step:
-            self.days += 1
+            if(self.days == self.model.false_year_duration):
+                self.days = 1
+                self.years += 1
+            else:
+                self.days += 1
+
         
         self.steps += 1
         self.time += 1

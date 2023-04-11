@@ -6,11 +6,7 @@ from CustomTime import RandomActivationByTypeOrdered
 from CustomDataCollector import CustomDataCollector
 from math import log
 
-# Un possibile parametro è la forma dello sfalcio
 
-STEPS_PER_DAY = 40
-MOWING_DAYS = 30
-PESTICIDE_DAYS = 60
 
 def computeIntraInterPollen(model):
     rs = []
@@ -64,24 +60,121 @@ def computPlantPollenAverage(model):
         
     return pollen/count if count > 0 else 0
 
+# Un possibile parametro è la forma dello sfalcio
+
+
 class GreenArea(Model):
     """
     Model class for the urban green area.
     The model starts in March
     """
 
-    def __init__(self, width=20, height=20, plant_density=0.8, queens_density=0.3, no_mow_pc=0.2):
+    def __init__(
+        self, 
+        width=20, 
+        height=20, 
+        queens_quantity=2, 
+        no_mow_pc=0.2,
+        steps_per_day = 40,
+        mowing_days = 30,
+        pesticide_days = 60,
+        false_year_duration = 190, #false duration of the year withouth hibernation period
+        seed_max_age = {
+            PlantType.SPRING_TYPE1: 0,
+            PlantType.SPRING_TYPE2: 0,
+            PlantType.SPRING_TYPE3: 0,
+            PlantType.SUMMER_TYPE1: 70,
+            PlantType.SUMMER_TYPE2: 70,
+            PlantType.SUMMER_TYPE3: 70,
+            PlantType.AUTUMN_TYPE1: 150,
+            PlantType.AUTUMN_TYPE2: 150,
+            PlantType.AUTUMN_TYPE3: 150
+        },
+        plant_reward = {
+            PlantType.SPRING_TYPE1: (0.4, 0.5),
+            PlantType.SPRING_TYPE2: (0.35, 0.55),
+            PlantType.SPRING_TYPE3: (0.4, 0.55),
+            PlantType.SUMMER_TYPE1: (0.4, 0.5),
+            PlantType.SUMMER_TYPE2: (0.35, 0.55),
+            PlantType.SUMMER_TYPE3: (0.4, 0.55),
+            PlantType.AUTUMN_TYPE1: (0.4, 0.5),
+            PlantType.AUTUMN_TYPE2: (0.35, 0.55),
+            PlantType.AUTUMN_TYPE3: (0.4, 0.55)
+        },
+        woods_drawing = True,
+        flower_area_type = FlowerAreaType.SOUTH_SECTION,
+        bumblebee_params = {
+            "max_memory": 10,
+            "days_till_sampling_mode": 3,
+            "steps_colony_return": 10,
+            "bee_age_experience": 5,
+            "max_pollen_load": 20,
+            "male_percentage": 0.3,
+            "new_queens_percentage": 0.3,
+            "nest_bees_percentage": 0.3,
+            "max_egg": 12,
+            "days_per_eggs": 5,
+            "queen_male_production_period": 120,
+            "hibernation_resources": (15, 15),
+            "stage_days": {
+                BeeStage.EGG: 4,
+                BeeStage.LARVAE: 13, 
+                BeeStage.PUPA: 13,
+                BeeStage.BEE: {
+                    BeeType.WORKER: 25,
+                    BeeType.NEST_BEE: 30,
+                    BeeType.MALE: 10,
+                    BeeType.QUEEN: 20
+                },
+                BeeStage.QUEEN: 130
+            }
+        },
+        plant_params = {
+            "nectar_storage": 100, 
+            "pollen_storage": 100,
+            "nectar_step_recharge": 0.02, #amount of recharge after a step
+            "pollen_step_recharge": 0.02, #amount of recharge after a step
+            "flower_age": {
+                PlantType.SPRING_TYPE1: 70,
+                PlantType.SPRING_TYPE2: 70,
+                PlantType.SPRING_TYPE3: 70,
+                PlantType.SUMMER_TYPE1: 80,
+                PlantType.SUMMER_TYPE2: 80,
+                PlantType.SUMMER_TYPE3: 80,
+                PlantType.AUTUMN_TYPE1: 40, # it's important that the sum coincides with false year duration
+                PlantType.AUTUMN_TYPE2: 40,
+                PlantType.AUTUMN_TYPE3: 40
+            },
+            "initial_seed_prod_prob": 0.2, #initial probability of seed production (it takes into account the wind and rain pollination)
+            "max_seeds": 6, #maximum number of seeds produced by the flower
+            "seed_prob": 0.6, #probability of a seed to become a flower
+        },
+        colony_params = {
+            "days_till_death": 4
+        }
+    ):
         """ """
+        # TODO parameters
         self.type_ordered_keys = self.getOrderedKeys()
         self.width = width
         self.height = height
-        self.plant_density = plant_density
-        self.queens_density = queens_density
+        self.queens_quantity = queens_quantity
         self.no_mow_pc = no_mow_pc
+        self.false_year_duration = false_year_duration
+        self.seed_max_age = seed_max_age
+        self.plant_reward = plant_reward
+        self.steps_per_day = steps_per_day
+        self.mowing_days = mowing_days
+        self.pesticide_days = pesticide_days
+        self.woods_drawing = woods_drawing
+        self.flower_area_type = flower_area_type
+        self.bumblebee_params = bumblebee_params
+        self.plant_params = plant_params
+        self.colony_params = colony_params
 
-        self.areaConstructor = AreaConstructor(FlowerAreaType.SOUTH_SECTION, self.height, self.width, self.no_mow_pc)
+        self.areaConstructor = AreaConstructor(self.flower_area_type, self.height, self.width, self.no_mow_pc)
 
-        self.schedule = RandomActivationByTypeOrdered(self, STEPS_PER_DAY)
+        self.schedule = RandomActivationByTypeOrdered(self, self.steps_per_day)
         self.grid = CustomMultiGrid(width, height, torus=False)
 
         self.datacollector_colonies = CustomDataCollector(
@@ -115,47 +208,79 @@ class GreenArea(Model):
         self.tree_id = 0
         self.plant_types_quantity = 2
         (r_max, t_max, l_max, d_max), wood_surface = self.areaConstructor.getWoodBoundsAndSurface()
-        for cell in self.grid.coord_iter():
-            x = cell[1]
-            y = cell[2]
+        for _, x, y in self.grid.coord_iter():
             if self.areaConstructor.isPointInFlowerArea((x,y)):
-                if self.random.random() < 0.5:
-                    plant_type = PlantType.TYPE2
-                    reward = (0.4, 0.5)
-                else:
-                    plant_type = PlantType.TYPE1
-                    reward = (0.35, 0.55)
-                    
-                agent = PlantAgent(self.plant_id, self, reward, plant_type, plant_stage=PlantStage.FLOWER)
-                self.plant_id += 1
-                self.grid.place_agent(agent, (x, y))
-                self.schedule.add(agent)
-            if (
-                (x <= l_max-1 or x >= self.width-r_max or y <= d_max-1 or y >= self.height-t_max)
-            ):
-                if (self.random.random() < self.queens_density):
-                    # metti i nidi dei bombi ai bordi del parco dove c'è il bosco 
-                    colony_agent = ColonyAgent(self.colony_id, self)
-                    queen_agent = BeeAgent(self.bee_id, self, BeeType.QUEEN, BeeStage.QUEEN, colony_agent)
-                    self.bee_id += 1
-                    self.colony_id += 1
-                    self.grid.place_agent(queen_agent, (x, y))
-                    self.grid.place_agent(colony_agent, (x, y))
-                    self.schedule.add(queen_agent)
-                    self.schedule.add(colony_agent)
-                    colony_agent.setQueen(queen_agent)
+                self.createPlantAgents(x, y)
 
+            if (self.woods_drawing and self.areaConstructor.isPointInWoodsArea((x,y))):
                 # solo per poter disegnare il bosco
                 tree_agent = TreeAgent(self.tree_id, self)
                 self.grid.place_agent(tree_agent, (x, y))
                 self.schedule.add(tree_agent)
                 self.tree_id += 1
                 
+        for _ in range(self.queens_quantity):
+            # metti i nidi dei bombi ai bordi del parco dove c'è il bosco 
+            queen_agent = BeeAgent(
+                self.bee_id, 
+                self, 
+                BeeType.QUEEN, 
+                BeeStage.QUEEN, 
+                None,
+                **self.bumblebee_params
+            )
+            colony_agent = self.createNewColony(queen_agent)
+            queen_agent.colony = colony_agent
+            self.bee_id += 1
+            self.grid.place_agent(queen_agent, colony_agent.pos)
+            self.schedule.add(queen_agent)
+
         self.running = True
 
         self.datacollector_colonies.collect(self)
         self.datacollector_bumblebees.collect(self)
         self.datacollector_plants.collect(self)
+
+    def createPlantAgents(self, x, y):
+        plant_types = []
+        
+        rand = self.random.random()
+        if rand < 0.33:
+            plant_types.append(PlantType.SPRING_TYPE1)
+        elif rand < 0.66:
+            plant_types.append(PlantType.SPRING_TYPE2)
+        else:
+            plant_types.append(PlantType.SPRING_TYPE3)
+            
+        rand = self.random.random()
+        if rand < 0.33:
+            plant_types.append(PlantType.SUMMER_TYPE1)
+        elif rand < 0.66:
+            plant_types.append(PlantType.SUMMER_TYPE3)
+        else:
+            plant_types.append(PlantType.SUMMER_TYPE2)
+
+        rand = self.random.random()
+        if rand < 0.33:
+            plant_types.append(PlantType.AUTUMN_TYPE1)
+        elif rand < 0.66:
+            plant_types.append(PlantType.AUTUMN_TYPE2)
+        else:
+            plant_types.append(PlantType.AUTUMN_TYPE3)
+            
+        for plant_type in plant_types:
+            agent = PlantAgent(
+                self.plant_id, 
+                self, 
+                reward = self.plant_reward[plant_type], 
+                plant_type = plant_type, 
+                plant_stage = PlantStage.SEED, 
+                seed_age = self.seed_max_age[plant_type],
+                **self.plant_params
+            )
+            self.plant_id += 1
+            self.grid.place_agent(agent, (x, y))
+            self.schedule.add(agent)
 
     def getOrderedKeys(self):
         return [BeeAgent, PlantAgent, ColonyAgent]
@@ -166,14 +291,13 @@ class GreenArea(Model):
         """
         # days are simulated in the schedule
         self.schedule.step(self.type_ordered_keys)
-        # TODO capire se è possibile skippare l'inverno
         
         if (self.schedule.days != 0):
             # simulo taglio erba periodico
-            if (self.schedule.days % MOWING_DAYS == 0):
+            if (self.schedule.days % self.mowing_days == 0):
                 self.mowPark()
             # dezanzarizzazione con conseguente stordimento del bombo
-            if (self.schedule.days % PESTICIDE_DAYS == 0):
+            if (self.schedule.days % self.pesticide_days == 0):
                 for bumblebee in self.schedule.agents_by_type[BeeAgent].values():
                     if bumblebee.bee_stage == BeeStage.BEE and bumblebee.bee_type == BeeType.WORKER:
                         bumblebee.pesticideConfusion()
@@ -183,6 +307,7 @@ class GreenArea(Model):
 
     def dailyStep(self):
         self.datacollector_colonies.collect(self)
+        pass
 
     def mowPark(self):
         for cell in self.grid.coord_iter():
@@ -193,15 +318,15 @@ class GreenArea(Model):
                 for plant in plants:
                     plant.setPlantDead()
 
-    def createNewFlowers(self, qty, parent: PlantAgent):
+    def createNewFlowers(self, qty: int, parent: PlantAgent, seed_age: int):
         # parto dal neighborhood del fiore per mettere i semi
         radius = 6
-        neighbors = self.grid.get_neighbor_cells_suitable_for_seeds(self.areaConstructor, parent.pos, True, radius = radius)
+        neighbors = self.grid.get_neighbor_cells_suitable_for_seeds(self.areaConstructor, parent.plant_type, parent.pos, True, radius = radius)
 
         while len(neighbors) < qty and radius < 10:
             #print("infinite loop potential")
             radius += 1
-            neighbors = self.grid.get_neighbor_cells_suitable_for_seeds(self.areaConstructor, parent.pos, True, radius = radius)
+            neighbors = self.grid.get_neighbor_cells_suitable_for_seeds(self.areaConstructor, parent.plant_type, parent.pos, True, radius = radius)
         
         qty = min(len(neighbors), qty)
         
@@ -209,14 +334,31 @@ class GreenArea(Model):
 
         for i in range(qty):
             x, y = neighbors[i]
-            agent = PlantAgent(self.plant_id, self, parent.reward, parent.plant_type)
+            agent = PlantAgent(
+                self.plant_id, 
+                self, 
+                reward = parent.reward, 
+                plant_type = parent.plant_type, 
+                plant_stage = PlantStage.SEED, 
+                seed_age = seed_age,
+                **self.plant_params
+            )
             self.plant_id += 1
             self.grid.place_agent(agent, (x, y))
             self.schedule.add(agent)
+        
+        print(f"Day {self.schedule.days}: Created {qty} plants of type {parent.plant_type.name}, and seed age of {seed_age} days")
 
     def createNewBumblebees(self, qty, bumblebee_type: BeeType, parent: BeeAgent):
         for _ in range (qty):
-            bumblebee = BeeAgent(self.bee_id, self, bumblebee_type, BeeStage.EGG, parent.colony)
+            bumblebee = BeeAgent(
+                self.bee_id, 
+                self, 
+                bumblebee_type, 
+                BeeStage.EGG, 
+                parent.colony,
+                **self.bumblebee_params
+            )
             parent.colony.addNewBee(bumblebee)
             self.bee_id += 1
             self.grid.place_agent(bumblebee, parent.colony.pos)
@@ -230,7 +372,11 @@ class GreenArea(Model):
             print("possible infinite loop")
             pos = self.areaConstructor.getRandomPositionInWoods(self.random)
         
-        colony_agent = ColonyAgent(self.colony_id, self)
+        colony_agent = ColonyAgent(
+            self.colony_id, 
+            self,
+            **self.colony_params
+        )
         self.colony_id += 1
         self.grid.place_agent(colony_agent, pos)  
         self.schedule.add(colony_agent)
