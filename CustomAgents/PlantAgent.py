@@ -1,6 +1,6 @@
 import mesa
 import numpy as np
-from Utils import PlantStage, PlantType
+from Utils import PlantStage, PlantType, Season
 from math import floor
 from typing import Tuple
 
@@ -14,6 +14,7 @@ class PlantAgent(mesa.Agent):
             model: mesa.Model, 
             reward: Tuple[float, float] = (0.4, 0.6), 
             plant_type: PlantType = PlantType.SPRING_TYPE1, 
+            plant_season: Season = Season.SPRING,
             plant_stage = PlantStage.SEED, 
             seed_age = 3,
             nectar_storage = 100, 
@@ -44,6 +45,7 @@ class PlantAgent(mesa.Agent):
         self.seed_prob = seed_prob #probability of a seed to become a flower
         self.reward = reward
         self.plant_type = plant_type
+        self.plant_season = plant_season
         self.seed_age = seed_age #maximum seed age before becoming a flower
         self.max_nectar_storage = nectar_storage
         self.max_pollen_storage = pollen_storage
@@ -88,7 +90,7 @@ class PlantAgent(mesa.Agent):
         elif self.plant_stage == PlantStage.FLOWER:
             if self.age >= self.flower_age[self.plant_type]:
                 if floor(self.max_seeds*self.seed_production_prob) > 0:
-                    new_seed_age = (self.model.false_year_duration - self.model.schedule.days) + self.model.days_per_season[self.plant_type]
+                    new_seed_age = (self.model.false_year_duration - self.model.schedule.days) + self.model.seed_max_age[self.plant_type]
                     self.model.createNewFlowers(floor(self.max_seeds*self.seed_production_prob), self, new_seed_age)
                 self.setPlantDead()
 

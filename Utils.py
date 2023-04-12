@@ -48,6 +48,11 @@ class FlowerAreaType(Enum):
     WEST_SECTION = 6
     EAST_SECTION = 7
 
+class Season(Enum):
+    SPRING = 1
+    SUMMER = 2
+    AUTUMN = 3
+
 class AreaConstructor():
     def __init__(self, area_type: FlowerAreaType, height, width, no_mow_pc) -> None:
         self.no_mow_pc = no_mow_pc

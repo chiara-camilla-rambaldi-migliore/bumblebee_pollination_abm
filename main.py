@@ -62,7 +62,8 @@ def getModels():
                     BeeType.QUEEN: 20
                 },
                 BeeStage.QUEEN: 130
-            }
+            },
+            "steps_for_consfused_flower_visitower_visitower_visitower_visitower_visitower_visitower_visit": 3
         },
         "plant_params": {
             "nectar_storage": 100, 

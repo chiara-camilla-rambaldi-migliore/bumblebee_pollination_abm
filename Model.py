@@ -1,6 +1,6 @@
 from mesa.model import Model
 from CustomMultiGrid import CustomMultiGrid
-from Utils import BeeType, BeeStage, PlantStage, PlantType, AreaConstructor, FlowerAreaType
+from Utils import BeeType, BeeStage, PlantStage, PlantType, AreaConstructor, FlowerAreaType, Season
 from CustomAgents import PlantAgent, BeeAgent, ColonyAgent, TreeAgent
 from CustomTime import RandomActivationByTypeOrdered
 from CustomDataCollector import CustomDataCollector
@@ -10,17 +10,26 @@ from math import log
 
 def computeIntraInterPollen(model):
     rs = []
-    for agent in model.schedule.agents_by_type[BeeAgent].values():
+    active_bumblebees = filter(lambda a: a.bee_stage == BeeStage.BEE or a.bee_stage == BeeStage.QUEEN, model.schedule.agents_by_type[BeeAgent].values())
+    active_plants = list(filter(lambda a: a.plant_stage == PlantStage.FLOWER, model.schedule.agents_by_type[PlantAgent].values()))
+    if len(active_plants) == 0:
+        return 0
+    plant_types = []
+    for plant in active_plants:
+        if plant.plant_type not in plant_types:
+            plant_types.append(plant.plant_type)
+    for agent in active_bumblebees:
         types = {}
-        for t in PlantType:
+        for t in plant_types:
             types[t] = 0
 
         for t, _ in agent.rewarded_memory:
-            types[t] += 1
+            if t in types:
+                types[t] += 1
 
-        max_types = len(PlantType)
+        max_types = len(plant_types)
         max_length = agent.max_memory
-        average = max_length/max_types
+        average = max_length/max_types if max_types > 0 else 0
         r = 0
         if(sum(types.values()) == 0):
             rs.append(r)
@@ -127,7 +136,8 @@ class GreenArea(Model):
                     BeeType.QUEEN: 20
                 },
                 BeeStage.QUEEN: 130
-            }
+            },
+            "steps_for_consfused_flower_visit": 3
         },
         plant_params = {
             "nectar_storage": 100, 
@@ -246,34 +256,35 @@ class GreenArea(Model):
         
         rand = self.random.random()
         if rand < 0.33:
-            plant_types.append(PlantType.SPRING_TYPE1)
+            plant_types.append((PlantType.SPRING_TYPE1, Season.SPRING))
         elif rand < 0.66:
-            plant_types.append(PlantType.SPRING_TYPE2)
+            plant_types.append((PlantType.SPRING_TYPE2, Season.SPRING))
         else:
-            plant_types.append(PlantType.SPRING_TYPE3)
+            plant_types.append((PlantType.SPRING_TYPE3, Season.SPRING))
             
         rand = self.random.random()
         if rand < 0.33:
-            plant_types.append(PlantType.SUMMER_TYPE1)
+            plant_types.append((PlantType.SUMMER_TYPE1, Season.SUMMER))
         elif rand < 0.66:
-            plant_types.append(PlantType.SUMMER_TYPE3)
+            plant_types.append((PlantType.SUMMER_TYPE3, Season.SUMMER))
         else:
-            plant_types.append(PlantType.SUMMER_TYPE2)
+            plant_types.append((PlantType.SUMMER_TYPE2, Season.SUMMER))
 
         rand = self.random.random()
         if rand < 0.33:
-            plant_types.append(PlantType.AUTUMN_TYPE1)
+            plant_types.append((PlantType.AUTUMN_TYPE1, Season.AUTUMN))
         elif rand < 0.66:
-            plant_types.append(PlantType.AUTUMN_TYPE2)
+            plant_types.append((PlantType.AUTUMN_TYPE2, Season.AUTUMN))
         else:
-            plant_types.append(PlantType.AUTUMN_TYPE3)
+            plant_types.append((PlantType.AUTUMN_TYPE3, Season.AUTUMN))
             
-        for plant_type in plant_types:
+        for plant_type, plant_season in plant_types:
             agent = PlantAgent(
                 self.plant_id, 
                 self, 
                 reward = self.plant_reward[plant_type], 
                 plant_type = plant_type, 
+                plant_season = plant_season,
                 plant_stage = PlantStage.SEED, 
                 seed_age = self.seed_max_age[plant_type],
                 **self.plant_params
@@ -321,12 +332,12 @@ class GreenArea(Model):
     def createNewFlowers(self, qty: int, parent: PlantAgent, seed_age: int):
         # parto dal neighborhood del fiore per mettere i semi
         radius = 6
-        neighbors = self.grid.get_neighbor_cells_suitable_for_seeds(self.areaConstructor, parent.plant_type, parent.pos, True, radius = radius)
+        neighbors = self.grid.get_neighbor_cells_suitable_for_seeds(self.areaConstructor, parent.plant_season, parent.pos, True, radius = radius)
 
         while len(neighbors) < qty and radius < 10:
             #print("infinite loop potential")
             radius += 1
-            neighbors = self.grid.get_neighbor_cells_suitable_for_seeds(self.areaConstructor, parent.plant_type, parent.pos, True, radius = radius)
+            neighbors = self.grid.get_neighbor_cells_suitable_for_seeds(self.areaConstructor, parent.plant_season, parent.pos, True, radius = radius)
         
         qty = min(len(neighbors), qty)
         
@@ -339,6 +350,7 @@ class GreenArea(Model):
                 self, 
                 reward = parent.reward, 
                 plant_type = parent.plant_type, 
+                plant_season = parent.plant_season,
                 plant_stage = PlantStage.SEED, 
                 seed_age = seed_age,
                 **self.plant_params

@@ -51,7 +51,8 @@ class BeeAgent(Agent):
                 },
                 BeeStage.QUEEN: 130 #almost all the season, then will die or killed from workers
                 #BeeStage.HIBERNATION: 10 #days calculated based on days till next false March
-            }
+            },
+            steps_for_consfused_flower_visit = 3
         ):
         """
         Create a new bumblebe agent.
@@ -81,6 +82,7 @@ class BeeAgent(Agent):
         self.queen_male_production_period = queen_male_production_period #number of days after queen dishibernation for males and queen production
         self.hibernation_resources = hibernation_resources
         self.stage_days = stage_days
+        self.steps_for_consfused_flower_visit = steps_for_consfused_flower_visit
 
         self.queen_foraging_days = self.days_per_eggs + self.stage_days[BeeStage.EGG] + self.stage_days[BeeStage.LARVAE] + self.stage_days[BeeStage.PUPA]
 
@@ -135,10 +137,14 @@ class BeeAgent(Agent):
                 #colleziona polline e nettare dalla pianta in cui sono
                 # foraging workers, males and new queens
                 if(
-                    ((self.bee_type != BeeType.NEST_BEE and self.bee_stage == BeeStage.BEE) or
-                    (self.bee_type == BeeType.QUEEN and self.age < self.queen_foraging_days and self.bee_stage == BeeStage.QUEEN)) and
-                    ((not self.confused) or self.model.schedule.steps % 2 == 0)
-
+                    (
+                        (self.bee_type != BeeType.NEST_BEE and self.bee_stage == BeeStage.BEE) or
+                        (self.bee_type == BeeType.QUEEN and self.age < self.queen_foraging_days and self.bee_stage == BeeStage.QUEEN)
+                    ) and
+                    (
+                        (not self.confused) or 
+                        self.model.schedule.steps % self.steps_for_consfused_flower_visit == 0
+                    )
                 ):
                     self.updatePollenNectarMemory()
                     newPosition = self.getNewPosition()

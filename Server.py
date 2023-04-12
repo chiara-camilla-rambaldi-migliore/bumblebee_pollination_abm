@@ -117,7 +117,8 @@ model_params = {
                 BeeType.QUEEN: 20
             },
             BeeStage.QUEEN: 130
-        }
+        },
+        "steps_for_consfused_flower_visit": 3
     },
     "plant_params": {
         "nectar_storage": 100, 
@@ -178,7 +179,7 @@ time_element = TimeElement()
 server = CustomModularServer(
     GreenArea,
     [canvas_element, time_element],
-    #[canvas_element, total_pollen_chart, seed_prob_chart, plant_pollen_average, nectar_chart],
+    #[canvas_element, time_element, total_pollen_chart, seed_prob_chart, plant_pollen_average, nectar_chart],
     "GreenArea",
     model_params,
     verbose=False,
