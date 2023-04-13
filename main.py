@@ -1,7 +1,7 @@
-from Model import GreenArea
+from bumblebee_pollination_abm.Model import GreenArea
 import concurrent.futures as futures
 import time
-from Utils import PlantType, BeeType, BeeStage, FlowerAreaType
+from bumblebee_pollination_abm.Utils import PlantType, BeeType, BeeStage, FlowerAreaType
 
 def getModels():
     size = (50, 50)
