@@ -21,7 +21,7 @@ class BeeAgent(Agent):
             max_memory = 10,
             days_till_sampling_mode = 3,
             steps_colony_return = 10, # should be a multiple of steps per day
-            bee_age_experience = 5,
+            bee_age_experience = 10,
             max_pollen_load = 20,
             male_percentage = 0.3,
             new_queens_percentage = 0.3,

@@ -97,7 +97,7 @@ model_params = {
     "bumblebee_params": {
         "days_till_sampling_mode": 3,
         "steps_colony_return": 10,
-        "bee_age_experience": 5,
+        "bee_age_experience": 10,
         "max_pollen_load": 20,
         "male_percentage": 0.3,
         "new_queens_percentage": 0.3,
