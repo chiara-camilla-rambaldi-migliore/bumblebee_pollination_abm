@@ -63,7 +63,7 @@ def getModels():
                 },
                 BeeStage.QUEEN: 130
             },
-            "steps_for_consfused_flower_visitower_visitower_visitower_visitower_visitower_visitower_visit": 3
+            "steps_for_consfused_flower_visit": 3
         },
         "plant_params": {
             "nectar_storage": 100, 

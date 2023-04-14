@@ -1,9 +1,9 @@
 import mesa
 import random
-from Model import GreenArea
-from CustomAgents import PlantAgent, BeeAgent, ColonyAgent, TreeAgent
-from Utils import BeeStage, BeeType, PlantStage, PlantType, FlowerAreaType
-from CustomModularServer import CustomModularServer
+from bumblebee_pollination_abm.Model import GreenArea
+from bumblebee_pollination_abm.CustomAgents import PlantAgent, BeeAgent, ColonyAgent, TreeAgent
+from bumblebee_pollination_abm.Utils import BeeStage, BeeType, PlantStage, PlantType, FlowerAreaType
+from bumblebee_pollination_abm.CustomModularServer import CustomModularServer
 
 
 def agents_draw(agent):
@@ -93,7 +93,7 @@ model_params = {
         PlantType.AUTUMN_TYPE3: (0.4, 0.55)
     },
     "woods_drawing": True,
-    "flower_area_type": FlowerAreaType.SOUTH_SECTION,
+    "flower_area_type": FlowerAreaType.SOUTH_SECTION.value,
     "bumblebee_params": {
         "days_till_sampling_mode": 3,
         "steps_colony_return": 10,

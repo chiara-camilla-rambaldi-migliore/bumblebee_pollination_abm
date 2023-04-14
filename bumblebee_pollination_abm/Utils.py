@@ -59,9 +59,9 @@ class AreaConstructor():
         self.height = height
         self.width = width
         self.area_type = area_type
-        self.getCoordinateFunction = getattr(self, f"getCoordForPlants{self.area_type.value}")
+        self.getCoordinateFunction = getattr(self, f"getCoordForPlants{self.area_type}")
         self.coords = self.getCoordinateFunction()
-        self.isPointInFlowerArea = getattr(self, f"isPointInFlowerArea{self.area_type.value}")
+        self.isPointInFlowerArea = getattr(self, f"isPointInFlowerArea{self.area_type}")
         self.parkBoundaries = self.getParkBoundaries()
 
     def getWoodBoundsAndSurface(self):

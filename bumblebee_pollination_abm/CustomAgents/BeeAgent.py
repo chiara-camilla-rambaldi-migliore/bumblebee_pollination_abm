@@ -1,7 +1,7 @@
 from mesa.agent import Agent
 import numpy as np
 from math import floor
-from Utils import BeeStage, BeeType, PlantType, ColonySize
+from bumblebee_pollination_abm.Utils import BeeStage, BeeType, PlantType, ColonySize
 
 
 
@@ -342,9 +342,9 @@ class BeeAgent(Agent):
                             plants_to_choose = plants_to_choose[0]
                         newPosition = plants_to_choose.pos
                 else:
-                    newPosition = neighbors[0].pos
+                    newPosition = neighbors[np.random.randint(0, len(neighbors))].pos
             else:
-                newPosition = neighbors[0].pos
+                newPosition = neighbors[np.random.randint(0, len(neighbors))].pos
 
         elif self.last_flower_position is not None:
             # vado nel posto in cui ero prima di tornare al nido

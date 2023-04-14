@@ -1,6 +1,6 @@
 import mesa
 import numpy as np
-from Utils import PlantStage, PlantType, Season
+from bumblebee_pollination_abm.Utils import PlantStage, PlantType, Season
 from math import floor
 from typing import Tuple
 

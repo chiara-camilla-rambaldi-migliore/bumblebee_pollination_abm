@@ -1,9 +1,9 @@
 from mesa.model import Model
-from CustomMultiGrid import CustomMultiGrid
-from Utils import BeeType, BeeStage, PlantStage, PlantType, AreaConstructor, FlowerAreaType, Season
-from CustomAgents import PlantAgent, BeeAgent, ColonyAgent, TreeAgent
-from CustomTime import RandomActivationByTypeOrdered
-from CustomDataCollector import CustomDataCollector
+from bumblebee_pollination_abm.CustomMultiGrid import CustomMultiGrid
+from bumblebee_pollination_abm.Utils import BeeType, BeeStage, PlantStage, PlantType, AreaConstructor, FlowerAreaType, Season
+from bumblebee_pollination_abm.CustomAgents import PlantAgent, BeeAgent, ColonyAgent, TreeAgent
+from bumblebee_pollination_abm.CustomTime import RandomActivationByTypeOrdered
+from bumblebee_pollination_abm.CustomDataCollector import CustomDataCollector
 from math import log
 
 
@@ -308,7 +308,7 @@ class GreenArea(Model):
             if (self.schedule.days % self.mowing_days == 0):
                 self.mowPark()
             # dezanzarizzazione con conseguente stordimento del bombo
-            if (self.schedule.days % self.pesticide_days == 0):
+            if (self.schedule.days % self.pesticide_days == 0 and self.schedule.steps % self.steps_per_day == 0):
                 for bumblebee in self.schedule.agents_by_type[BeeAgent].values():
                     if bumblebee.bee_stage == BeeStage.BEE and bumblebee.bee_type == BeeType.WORKER:
                         bumblebee.pesticideConfusion()

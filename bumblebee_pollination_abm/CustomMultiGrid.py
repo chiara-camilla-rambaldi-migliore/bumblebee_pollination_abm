@@ -1,8 +1,8 @@
 from mesa.space import MultiGrid
 from mesa.agent import Agent
-import CustomAgents
 from typing import Tuple, Iterable
-from Utils import PlantStage
+from bumblebee_pollination_abm.Utils import PlantStage
+import bumblebee_pollination_abm.CustomAgents as CustomAgents
 
 Coordinate = Tuple[int, int]
 

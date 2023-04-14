@@ -1,8 +1,5 @@
 import mesa
-from Utils import BeeStage, ColonySize
-
-
-
+from bumblebee_pollination_abm.Utils import BeeStage, ColonySize
 
 class ColonyAgent(mesa.Agent):
     def __init__(
