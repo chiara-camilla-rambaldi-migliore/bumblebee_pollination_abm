@@ -19,7 +19,7 @@ class ColonyAgent(mesa.Agent):
         self.days_till_death = days_till_death
 
     def __del__(self):
-        pass#print(f"Colony {self.unique_id} died")
+        pass#self.model.log(f"Colony {self.unique_id} died")
 
     def setQueen(self, queen: mesa.Agent):
         self.queen = queen

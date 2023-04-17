@@ -1,0 +1,6 @@
+{
+        "no_mow_pc": 0.2,
+        "mowing_days": 30,
+        "pesticide_days": 60,
+        "flower_area_type": 5
+}

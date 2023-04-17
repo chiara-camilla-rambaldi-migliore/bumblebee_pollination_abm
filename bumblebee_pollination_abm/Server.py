@@ -82,17 +82,17 @@ model_params = {
         PlantType.AUTUMN_TYPE3: 150
     },
     "plant_reward": {
-        PlantType.SPRING_TYPE1: (0.4, 0.5),
-        PlantType.SPRING_TYPE2: (0.35, 0.55),
+        PlantType.SPRING_TYPE1: (0.45, 0.5),
+        PlantType.SPRING_TYPE2: (0.35, 0.6),
         PlantType.SPRING_TYPE3: (0.4, 0.55),
-        PlantType.SUMMER_TYPE1: (0.4, 0.5),
-        PlantType.SUMMER_TYPE2: (0.35, 0.55),
+        PlantType.SUMMER_TYPE1: (0.45, 0.5),
+        PlantType.SUMMER_TYPE2: (0.35, 0.6),
         PlantType.SUMMER_TYPE3: (0.4, 0.55),
-        PlantType.AUTUMN_TYPE1: (0.4, 0.5),
-        PlantType.AUTUMN_TYPE2: (0.35, 0.55),
+        PlantType.AUTUMN_TYPE1: (0.45, 0.5),
+        PlantType.AUTUMN_TYPE2: (0.35, 0.6),
         PlantType.AUTUMN_TYPE3: (0.4, 0.55)
     },
-    "woods_drawing": True,
+    "woods_drawing": False,
     "flower_area_type": FlowerAreaType.SOUTH_SECTION.value,
     "bumblebee_params": {
         "days_till_sampling_mode": 3,
@@ -105,7 +105,7 @@ model_params = {
         "max_egg": 12,
         "days_per_eggs": 5,
         "queen_male_production_period": 120,
-        "hibernation_resources": (15, 15),
+        "hibernation_resources": (18, 18),
         "stage_days": {
             BeeStage.EGG: 4,
             BeeStage.LARVAE: 13, 
@@ -123,8 +123,8 @@ model_params = {
     "plant_params": {
         "nectar_storage": 100, 
         "pollen_storage": 100,
-        "nectar_step_recharge": 0.02, #amount of recharge after a step
-        "pollen_step_recharge": 0.02, #amount of recharge after a step
+        "nectar_step_recharge": 0.015, #amount of recharge after a step
+        "pollen_step_recharge": 0.015, #amount of recharge after a step
         "flower_age": {
             PlantType.SPRING_TYPE1: 70,
             PlantType.SPRING_TYPE2: 70,

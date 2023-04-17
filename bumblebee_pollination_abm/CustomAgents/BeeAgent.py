@@ -63,7 +63,6 @@ class BeeAgent(Agent):
            max_memory: maximum number of reward remembered by the bee.
         """
         super().__init__(f"bee_{id}", model)
-
         self.days_till_sampling_mode = days_till_sampling_mode
         self.steps_colony_return = steps_colony_return # should be a multiple of steps per day
         self.bee_age_experience = bee_age_experience
@@ -105,7 +104,7 @@ class BeeAgent(Agent):
         self.updateCollectionRatio()
     
     def __del__(self):
-        pass#print("Deleted bumblebee", self.unique_id, self.bee_type.name)
+        pass#self.model.log("Deleted bumblebee", self.unique_id, self.bee_type.name)
     
     def initializePollen(self):
         for type in PlantType:
@@ -119,7 +118,7 @@ class BeeAgent(Agent):
             self.collection_ratio = (self.age+1)/self.bee_age_experience if self.age < self.bee_age_experience else 1
 
     def pesticideConfusion(self):
-        #print(f"Bumblebee {self.unique_id} confused")
+        #self.model.log(f"Bumblebee {self.unique_id} confused")
         self.max_memory = floor(self.max_memory/2)
         self.resetRewardedMemory()
         self.confused = True
@@ -208,36 +207,38 @@ class BeeAgent(Agent):
         (colony_nectar, colony_pollen) = self.colony.getResources()
         (nect_cons, pol_cons) = self.colony.getConsumption()
         eggs = floor(min(min(colony_nectar/(20*nect_cons), self.max_egg), min(colony_pollen/(20*pol_cons), self.max_egg)))
-        print(f"producing {eggs} eggs at age {self.age} with days per egg = {self.days_per_eggs}")
-        if self.age  < self.queen_male_production_period:
-            nest_bee_eggs = floor(self.nest_bees_percentage*eggs)
-            worker_eggs = eggs-nest_bee_eggs
-            self.model.createNewBumblebees(nest_bee_eggs, BeeType.NEST_BEE, self)
-            self.model.createNewBumblebees(worker_eggs, BeeType.WORKER, self)
-        else:
-            # quantità nuove regine basata su quantità workers nella colonia
-            if self.colony.getSize() == ColonySize.SMALL:
-                male_percentage = 0
-                new_queens_percentage = 0
-            elif self.colony.getSize() == ColonySize.MEDIUM:
-                male_percentage = self.male_percentage
-                new_queens_percentage = 0
-            elif self.colony.getSize() == ColonySize.BIG:
-                male_percentage = self.male_percentage
-                new_queens_percentage = self.new_queens_percentage
+        eggs = max(eggs, 0)
+        self.model.log(f"producing {eggs} eggs at age {self.age} with days per egg = {self.days_per_eggs}")
+        if eggs > 0:
+            if self.age  < self.queen_male_production_period:
+                nest_bee_eggs = floor(self.nest_bees_percentage*eggs)
+                worker_eggs = eggs-nest_bee_eggs
+                self.model.createNewBumblebees(nest_bee_eggs, BeeType.NEST_BEE, self)
+                self.model.createNewBumblebees(worker_eggs, BeeType.WORKER, self)
+            else:
+                # quantità nuove regine basata su quantità workers nella colonia
+                if self.colony.getSize() == ColonySize.SMALL:
+                    male_percentage = 0
+                    new_queens_percentage = 0
+                elif self.colony.getSize() == ColonySize.MEDIUM:
+                    male_percentage = self.male_percentage
+                    new_queens_percentage = 0
+                elif self.colony.getSize() == ColonySize.BIG:
+                    male_percentage = self.male_percentage
+                    new_queens_percentage = self.new_queens_percentage
 
-            male_eggs = floor(male_percentage*eggs)
-            new_queen_eggs = floor(new_queens_percentage*eggs)
-            eggs = eggs - male_eggs - new_queen_eggs
+                male_eggs = floor(male_percentage*eggs)
+                new_queen_eggs = floor(new_queens_percentage*eggs)
+                eggs = eggs - male_eggs - new_queen_eggs
 
-            self.model.createNewBumblebees(eggs, BeeType.WORKER, self)
-            self.model.createNewBumblebees(male_eggs, BeeType.MALE, self)
-            print("created males", male_eggs)
-            self.model.createNewBumblebees(new_queen_eggs, BeeType.QUEEN, self)
-            print("created new queens", new_queen_eggs)
+                self.model.createNewBumblebees(eggs, BeeType.WORKER, self)
+                self.model.createNewBumblebees(male_eggs, BeeType.MALE, self)
+                self.model.log(f"created males: {male_eggs}")
+                self.model.createNewBumblebees(new_queen_eggs, BeeType.QUEEN, self)
+                self.model.log(f"created new queens: {new_queen_eggs}")
 
         
-        print(f"colony size: {len(self.colony.population)}")
+        self.model.log(f"colony size: {len(self.colony.population)}")
 
     def updateStage(self):
         if self.bee_stage == BeeStage.EGG:
@@ -260,9 +261,10 @@ class BeeAgent(Agent):
                 if(self.bee_type == BeeType.QUEEN and self.mated):
                     self.bee_stage = BeeStage.HIBERNATION
                     self.age = 0
-                    self.colony.removeBee(self)
-                    self.colony = None
-                    print(f"New queen {self.unique_id} is hibernating")
+                    if self.colony is not None:
+                        self.colony.removeBee(self)
+                        self.colony = None
+                    self.model.log(f"New queen {self.unique_id} is hibernating")
                 else:
                     self.bee_stage =  BeeStage.DEATH
                     self.setBeeDead()
@@ -278,10 +280,10 @@ class BeeAgent(Agent):
             #if self.age >= STAGE_DAYS[BeeStage.HIBERNATION]:
                 # survival based on resources loaded
                 # TODO check plausibility
-                print("resources: ", self.nectar, sum(self.pollen.values()))
+                self.model.log(f"resources: {self.nectar} {sum(self.pollen.values())}")
                 if(self.nectar >= self.hibernation_resources[0] and sum(self.pollen.values()) >= self.hibernation_resources[1]):
-                    print(f"queen {self.unique_id} starts new colony")
-                    self.age = 0
+                    self.model.log(f"queen {self.unique_id} starts new colony")
+                    self.age = 1
                     # new colony in random position
                     colony = self.model.createNewColony(self)
                     self.colony = colony
@@ -292,7 +294,8 @@ class BeeAgent(Agent):
 
     def setBeeDead(self):
         self.plant_stage = BeeStage.DEATH
-        self.colony.removeBee(self)
+        if(self.colony is not None):
+            self.colony.removeBee(self)
         self.model.removeDeceasedAgent(self)
 
     def updatePollenNectarMemory(self):

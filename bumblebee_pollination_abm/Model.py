@@ -4,8 +4,8 @@ from bumblebee_pollination_abm.Utils import BeeType, BeeStage, PlantStage, Plant
 from bumblebee_pollination_abm.CustomAgents import PlantAgent, BeeAgent, ColonyAgent, TreeAgent
 from bumblebee_pollination_abm.CustomTime import RandomActivationByTypeOrdered
 from bumblebee_pollination_abm.CustomDataCollector import CustomDataCollector
-from math import log
-
+from bumblebee_pollination_abm.setup_logger import logger
+import sys
 
 
 def computeIntraInterPollen(model):
@@ -164,7 +164,7 @@ class GreenArea(Model):
         }
     ):
         """ """
-        # TODO parameters
+        #parameters
         self.type_ordered_keys = self.getOrderedKeys()
         self.width = width
         self.height = height
@@ -247,9 +247,9 @@ class GreenArea(Model):
 
         self.running = True
 
-        self.datacollector_colonies.collect(self)
-        self.datacollector_bumblebees.collect(self)
-        self.datacollector_plants.collect(self)
+        # self.datacollector_colonies.collect(self)
+        # self.datacollector_bumblebees.collect(self)
+        # self.datacollector_plants.collect(self)
 
     def createPlantAgents(self, x, y):
         plant_types = []
@@ -285,7 +285,7 @@ class GreenArea(Model):
                 reward = self.plant_reward[plant_type], 
                 plant_type = plant_type, 
                 plant_season = plant_season,
-                plant_stage = PlantStage.SEED, 
+                plant_stage = PlantStage.SEED if self.seed_max_age[plant_type] > 0 else PlantStage.FLOWER, 
                 seed_age = self.seed_max_age[plant_type],
                 **self.plant_params
             )
@@ -313,11 +313,11 @@ class GreenArea(Model):
                     if bumblebee.bee_stage == BeeStage.BEE and bumblebee.bee_type == BeeType.WORKER:
                         bumblebee.pesticideConfusion()
             
-        self.datacollector_bumblebees.collect(self)
-        self.datacollector_plants.collect(self)
+        # self.datacollector_bumblebees.collect(self)
+        # self.datacollector_plants.collect(self)
 
     def dailyStep(self):
-        self.datacollector_colonies.collect(self)
+        # self.datacollector_colonies.collect(self)
         pass
 
     def mowPark(self):
@@ -329,13 +329,13 @@ class GreenArea(Model):
                 for plant in plants:
                     plant.setPlantDead()
 
-    def createNewFlowers(self, qty: int, parent: PlantAgent, seed_age: int):
+    def createNewFlowers(self, qty: int, parent: PlantAgent, seed_age: int, generation: int):
         # parto dal neighborhood del fiore per mettere i semi
         radius = 6
         neighbors = self.grid.get_neighbor_cells_suitable_for_seeds(self.areaConstructor, parent.plant_season, parent.pos, True, radius = radius)
 
         while len(neighbors) < qty and radius < 10:
-            #print("infinite loop potential")
+            #self.log("infinite loop potential")
             radius += 1
             neighbors = self.grid.get_neighbor_cells_suitable_for_seeds(self.areaConstructor, parent.plant_season, parent.pos, True, radius = radius)
         
@@ -351,15 +351,16 @@ class GreenArea(Model):
                 reward = parent.reward, 
                 plant_type = parent.plant_type, 
                 plant_season = parent.plant_season,
-                plant_stage = PlantStage.SEED, 
+                plant_stage = PlantStage.SEED if seed_age > 0 else PlantStage.FLOWER, 
                 seed_age = seed_age,
+                gen_number = generation,
                 **self.plant_params
             )
             self.plant_id += 1
             self.grid.place_agent(agent, (x, y))
             self.schedule.add(agent)
         
-        print(f"Day {self.schedule.days}: Created {qty} plants of type {parent.plant_type.name}, and seed age of {seed_age} days")
+        self.log(f"Day {self.schedule.days}: Created {qty} plants of type {parent.plant_type.name}, and seed age of {seed_age} days")
 
     def createNewBumblebees(self, qty, bumblebee_type: BeeType, parent: BeeAgent):
         for _ in range (qty):
@@ -380,9 +381,14 @@ class GreenArea(Model):
         pos = self.areaConstructor.getRandomPositionInWoods(self.random)
         lambda_func = lambda a: not isinstance(a, TreeAgent)
         agents_same_pos = self.grid.get_cell_custom_list_contents(lambda_func, pos)
+        loop = 0
         while (len(agents_same_pos) > 0):
-            print("possible infinite loop")
+            if(loop >= 10):
+                sys.exit("Infinite Loop")
+            self.log("possible infinite loop")
+            self.log(f"pos: {pos}, agents: {agents_same_pos}")
             pos = self.areaConstructor.getRandomPositionInWoods(self.random)
+            loop += 1
         
         colony_agent = ColonyAgent(
             self.colony_id, 
@@ -399,4 +405,7 @@ class GreenArea(Model):
         self.grid.remove_agent(agent)
         self.schedule.remove(agent)
         if(isinstance(agent, ColonyAgent)):
-            print(f"Colony {agent.unique_id} died")
+            self.log(f"Colony {agent.unique_id} died")
+
+    def log(self, message):
+        logger.info(message)

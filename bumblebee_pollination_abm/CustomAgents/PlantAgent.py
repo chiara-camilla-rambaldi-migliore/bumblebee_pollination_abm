@@ -34,7 +34,9 @@ class PlantAgent(mesa.Agent):
             },
             initial_seed_prod_prob = 0.2, #initial probability of seed production (it takes into account the wind and rain pollination)
             max_seeds = 6, #maximum number of seeds produced by the flower
-            seed_prob = 0.6 #probability of a seed to become a flower
+            seed_prob = 0.6, #probability of a seed to become a flower
+            max_gen_per_season = 2,
+            gen_number = 1
         ):        
         super().__init__(f"plant_{id}", model)
         self.nectar_step_recharge = nectar_step_recharge #amount of recharge after a step
@@ -54,9 +56,11 @@ class PlantAgent(mesa.Agent):
         self.plant_stage = plant_stage
         self.seed_production_prob = self.initial_seed_prod_prob if self.plant_stage == PlantStage.FLOWER else 0
         self.age = 0
+        self.max_gen_per_season = max_gen_per_season
+        self.gen_number = gen_number
 
     def __del__(self):
-        pass#print("Deleted plant", self.unique_id)
+        pass#self.model.log(f"Deleted plant {self.unique_id}")
 
     def step(self):
         if self.plant_stage == PlantStage.FLOWER:
@@ -81,18 +85,27 @@ class PlantAgent(mesa.Agent):
             if self.age >= self.seed_age:
                 if self.model.random.random() < self.seed_prob:
                     self.plant_stage = PlantStage.FLOWER
-                    # print(f"Plant of type {self.plant_type.name} is born")
+                    #self.model.log(f"Day: {self.model.schedule.days} \tPlant of type {self.plant_type.name} is born")
                     self.seed_production_prob = self.initial_seed_prod_prob
                     self.age = 0
                 else:
                     self.setPlantDead()
 
         elif self.plant_stage == PlantStage.FLOWER:
-            if self.age >= self.flower_age[self.plant_type]:
-                if floor(self.max_seeds*self.seed_production_prob) > 0:
+            self.updateFlowerStage()
+
+    def updateFlowerStage(self):
+        if self.age >= self.flower_age[self.plant_type]/self.max_gen_per_season:
+            if floor(self.max_seeds*self.seed_production_prob) > 0:
+                if self.gen_number >= self.max_gen_per_season:
                     new_seed_age = (self.model.false_year_duration - self.model.schedule.days) + self.model.seed_max_age[self.plant_type]
-                    self.model.createNewFlowers(floor(self.max_seeds*self.seed_production_prob), self, new_seed_age)
-                self.setPlantDead()
+                    new_gen_number = 1
+                else:
+                    new_seed_age = 0
+                    new_gen_number = self.gen_number + 1
+
+                self.model.createNewFlowers(floor(self.max_seeds*self.seed_production_prob), self, new_seed_age, new_gen_number)
+            self.setPlantDead()
 
     def setPlantDead(self):
         self.plant_stage = PlantStage.DEATH
