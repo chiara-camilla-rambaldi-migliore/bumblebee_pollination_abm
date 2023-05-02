@@ -1,6 +1,8 @@
 import datetime
+from bumblebee_pollination_abm import CustomAgents
 
 __all__ = [
+    "CustomAgents"
 ]
 
 __title__ = "bumblebee-pollination-abm"

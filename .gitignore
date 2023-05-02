@@ -2,3 +2,5 @@
 */__pycache__
 __pycache__
 bumblebee_pollination_abm.egg-info
+build
+logs

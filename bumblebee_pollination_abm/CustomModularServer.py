@@ -1,4 +1,3 @@
-import tornado.web
 from mesa.visualization.ModularVisualization import ModularServer
 
 class CustomModularServer(ModularServer):
