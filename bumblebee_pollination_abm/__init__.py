@@ -1,5 +1,5 @@
 import datetime
-from bumblebee_pollination_abm import CustomAgents
+from . import CustomAgents
 
 __all__ = [
     "CustomAgents"
