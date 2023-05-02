@@ -93,7 +93,7 @@ model_params = {
         PlantType.AUTUMN_TYPE3: (0.4, 0.55)
     },
     "woods_drawing": False,
-    "flower_area_type": FlowerAreaType.SOUTH_SECTION.value,
+    "flower_area_type": FlowerAreaType.PERIMETRAL.value,
     "bumblebee_params": {
         "days_till_sampling_mode": 3,
         "steps_colony_return": 10,
@@ -105,7 +105,7 @@ model_params = {
         "max_egg": 12,
         "days_per_eggs": 5,
         "queen_male_production_period": 120,
-        "hibernation_resources": (18, 18),
+        "hibernation_resources": (19, 19),
         "stage_days": {
             BeeStage.EGG: 4,
             BeeStage.LARVAE: 13, 
@@ -118,7 +118,9 @@ model_params = {
             },
             BeeStage.QUEEN: 130
         },
-        "steps_for_consfused_flower_visit": 3
+        "steps_for_consfused_flower_visit": 3,
+        "max_collection_ratio": 1,
+        "hibernation_survival_probability": 0.5
     },
     "plant_params": {
         "nectar_storage": 100, 
@@ -141,6 +143,8 @@ model_params = {
         "seed_prob": 0.6, #probability of a seed to become a flower
     },
     "colony_params": {
+        "nectar_consumption_per_bee": 0.7,
+        "pollen_consumption_per_bee": 0.7,
         "days_till_death": 4
     }
 }

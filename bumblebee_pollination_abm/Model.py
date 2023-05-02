@@ -137,7 +137,8 @@ class GreenArea(Model):
                 },
                 BeeStage.QUEEN: 130
             },
-            "steps_for_consfused_flower_visit": 3
+            "steps_for_consfused_flower_visit": 3,
+            "max_collection_ratio": 1
         },
         plant_params = {
             "nectar_storage": 100, 
@@ -160,6 +161,8 @@ class GreenArea(Model):
             "seed_prob": 0.6, #probability of a seed to become a flower
         },
         colony_params = {
+            "nectar_consumption_per_bee": 0.7,
+            "pollen_consumption_per_bee": 0.7,
             "days_till_death": 4
         }
     ):
@@ -231,6 +234,7 @@ class GreenArea(Model):
                 
         for _ in range(self.queens_quantity):
             # metti i nidi dei bombi ai bordi del parco dove c'è il bosco 
+            self.bumblebee_params["max_collection_ratio"] = self.random.uniform(0.8, 1)
             queen_agent = BeeAgent(
                 self.bee_id, 
                 self, 
@@ -360,10 +364,11 @@ class GreenArea(Model):
             self.grid.place_agent(agent, (x, y))
             self.schedule.add(agent)
         
-        self.log(f"Day {self.schedule.days}: Created {qty} plants of type {parent.plant_type.name}, and seed age of {seed_age} days")
+        #self.log(f"Day {self.schedule.days}: Created {qty} plants of type {parent.plant_type.name}, and seed age of {seed_age} days")
 
     def createNewBumblebees(self, qty, bumblebee_type: BeeType, parent: BeeAgent):
         for _ in range (qty):
+            self.bumblebee_params["max_collection_ratio"] = self.random.uniform(0.8, 1)
             bumblebee = BeeAgent(
                 self.bee_id, 
                 self, 
@@ -389,6 +394,9 @@ class GreenArea(Model):
             self.log(f"pos: {pos}, agents: {agents_same_pos}")
             pos = self.areaConstructor.getRandomPositionInWoods(self.random)
             loop += 1
+
+        if queen.nectar > 19 and sum(queen.pollen.values()) > 20:
+            self.colony_params["days_till_death"] = 6
         
         colony_agent = ColonyAgent(
             self.colony_id, 

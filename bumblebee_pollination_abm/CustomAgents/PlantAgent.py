@@ -154,7 +154,7 @@ class PlantAgent(mesa.Agent):
     '''
     def getPollen(self, ratio):
         if self.plant_stage == PlantStage.FLOWER:
-            pollen_reward = np.random.uniform(0, 1)*ratio
+            pollen_reward = np.random.uniform(0.5, 0.8)*ratio
             if (self.pollen_storage > pollen_reward):
                 self.pollen_storage -= pollen_reward
             else:

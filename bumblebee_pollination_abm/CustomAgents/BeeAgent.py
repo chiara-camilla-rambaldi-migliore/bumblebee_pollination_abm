@@ -52,7 +52,9 @@ class BeeAgent(Agent):
                 BeeStage.QUEEN: 130 #almost all the season, then will die or killed from workers
                 #BeeStage.HIBERNATION: 10 #days calculated based on days till next false March
             },
-            steps_for_consfused_flower_visit = 3
+            steps_for_consfused_flower_visit = 3,
+            max_collection_ratio = 1,
+            hibernation_survival_probability = 0.5
         ):
         """
         Create a new bumblebe agent.
@@ -82,6 +84,8 @@ class BeeAgent(Agent):
         self.hibernation_resources = hibernation_resources
         self.stage_days = stage_days
         self.steps_for_consfused_flower_visit = steps_for_consfused_flower_visit
+        self.max_collection_ratio = max_collection_ratio
+        self.hibernation_survival_probability = hibernation_survival_probability
 
         self.queen_foraging_days = self.days_per_eggs + self.stage_days[BeeStage.EGG] + self.stage_days[BeeStage.LARVAE] + self.stage_days[BeeStage.PUPA]
 
@@ -101,6 +105,7 @@ class BeeAgent(Agent):
         self.batch_laid = 0
         self.confused = False
         self.initializePollen()
+        self.collection_ratio = 0
         self.updateCollectionRatio()
     
     def __del__(self):
@@ -113,9 +118,9 @@ class BeeAgent(Agent):
     def updateCollectionRatio(self):
         # il polline e nettare collezionato aumenta con l'età
         if self.bee_type == BeeType.QUEEN and self.bee_stage == BeeStage.QUEEN:
-            self.collection_ratio = 1
-        else:
-            self.collection_ratio = (self.age+1)/self.bee_age_experience if self.age < self.bee_age_experience else 1
+            self.collection_ratio = self.max_collection_ratio
+        elif self.bee_stage == BeeStage.BEE:
+            self.collection_ratio = min((self.age+1)/self.bee_age_experience, self.max_collection_ratio) if self.age < self.bee_age_experience else self.max_collection_ratio
 
     def pesticideConfusion(self):
         #self.model.log(f"Bumblebee {self.unique_id} confused")
@@ -239,6 +244,7 @@ class BeeAgent(Agent):
 
         
         self.model.log(f"colony size: {len(self.colony.population)}")
+        self.model.log(f"colony resources: {self.colony.getResources()}")
 
     def updateStage(self):
         if self.bee_stage == BeeStage.EGG:
@@ -281,7 +287,10 @@ class BeeAgent(Agent):
                 # survival based on resources loaded
                 # TODO check plausibility
                 self.model.log(f"resources: {self.nectar} {sum(self.pollen.values())}")
-                if(self.nectar >= self.hibernation_resources[0] and sum(self.pollen.values()) >= self.hibernation_resources[1]):
+                if(
+                    (self.nectar >= self.hibernation_resources[0] and sum(self.pollen.values()) >= self.hibernation_resources[1]) or
+                    (self.model.random.random() < self.hibernation_survival_probability)
+                ):
                     self.model.log(f"queen {self.unique_id} starts new colony")
                     self.age = 1
                     # new colony in random position

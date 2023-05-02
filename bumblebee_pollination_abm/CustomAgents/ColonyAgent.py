@@ -6,13 +6,15 @@ class ColonyAgent(mesa.Agent):
             self, 
             id, 
             model,
+            nectar_consumption_per_bee = 0.7,
+            pollen_consumption_per_bee = 1.2,
             days_till_death = 4
         ):
         super().__init__(f"colony_{id}", model)
         self.nectar = 0
         self.pollen = 0
-        self.nectar_consumption_per_bee = 0.7
-        self.pollen_consumption_per_bee = 0.7
+        self.nectar_consumption_per_bee = nectar_consumption_per_bee
+        self.pollen_consumption_per_bee = pollen_consumption_per_bee
         self.population = {}
         self.no_resource_days = 0
         self.age = 0
