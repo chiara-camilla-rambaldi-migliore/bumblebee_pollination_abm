@@ -95,6 +95,7 @@ model_params = {
     "woods_drawing": False,
     "flower_area_type": FlowerAreaType.PERIMETRAL.value,
     "bumblebee_params": {
+        "max_memory": 10,
         "days_till_sampling_mode": 3,
         "steps_colony_return": 10,
         "bee_age_experience": 10,
@@ -141,6 +142,7 @@ model_params = {
         "initial_seed_prod_prob": 0.2, #initial probability of seed production (it takes into account the wind and rain pollination)
         "max_seeds": 6, #maximum number of seeds produced by the flower
         "seed_prob": 0.6, #probability of a seed to become a flower
+        "max_gen_per_season": 2,
     },
     "colony_params": {
         "nectar_consumption_per_bee": 0.7,

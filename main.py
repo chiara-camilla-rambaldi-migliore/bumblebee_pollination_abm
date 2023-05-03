@@ -40,6 +40,7 @@ def getModels():
         "woods_drawing": False,
         "flower_area_type": FlowerAreaType.SOUTH_SECTION.value,
         "bumblebee_params": {
+            "max_memory": 10,
             "days_till_sampling_mode": 3,
             "steps_colony_return": 10,
             "bee_age_experience": 10,
@@ -86,6 +87,7 @@ def getModels():
             "initial_seed_prod_prob": 0.2, #initial probability of seed production (it takes into account the wind and rain pollination)
             "max_seeds": 6, #maximum number of seeds produced by the flower
             "seed_prob": 0.6, #probability of a seed to become a flower
+            "max_gen_per_season": 2,
         },
         "colony_params": {
             "nectar_consumption_per_bee": 0.7,
@@ -97,15 +99,16 @@ def getModels():
     models = []
 
     
-    for i in range(1):
+    for i in range(5):
         models.append(GreenArea(**model_params))
 
     return models
 
 
 def startModel(model):
-    for i in range(38000):
+    for i in range(7600):
         model.step()
+    return model.getHibernatedQueensQuantity()
 
 
 def processJobs():
@@ -117,6 +120,7 @@ def processJobs():
 
 
     start_time = time.time()
+    fitness = []
 
     with futures.ProcessPoolExecutor(max_workers=MAX_CORES) as executor:
         for model in models:
@@ -126,14 +130,16 @@ def processJobs():
                 )
             )
 
+    quantities = []
     for i in range(len(proc_res)):
         try:
-            proc_res[i].result()
+            qty = proc_res[i].result()
+            quantities.append(qty)
             print(f"Process {i} terminated correctly")
         except Exception as ex:
             print(f"Error in process {i}: [{ex}]")
 
-    print(f"Elapsed time: {time.time() - start_time}")
+    print(f"Elapsed time: {time.time() - start_time}, fitness: {fitness}, quantities: {quantities}")
 
 if __name__ == '__main__':
     processJobs()

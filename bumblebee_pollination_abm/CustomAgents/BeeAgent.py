@@ -264,7 +264,15 @@ class BeeAgent(Agent):
                 
         elif self.bee_stage == BeeStage.BEE:
             if self.age >= self.stage_days[BeeStage.BEE][self.bee_type]:
-                if(self.bee_type == BeeType.QUEEN and self.mated):
+                if(
+                    self.bee_type == BeeType.QUEEN and 
+                    self.mated and 
+                    (
+                        (self.nectar >= self.hibernation_resources[0] and sum(self.pollen.values()) >= self.hibernation_resources[1]) or
+                        (self.model.random.random() < self.hibernation_survival_probability)
+                    )
+                ):
+                    self.model.log(f"resources: {self.nectar} {sum(self.pollen.values())}")
                     self.bee_stage = BeeStage.HIBERNATION
                     self.age = 0
                     if self.colony is not None:
@@ -282,24 +290,16 @@ class BeeAgent(Agent):
                 #self.colony.setColonyDead()
         
         elif self.bee_stage == BeeStage.HIBERNATION:
-            if self.model.schedule.days == 1: # TODO check
+            if self.model.schedule.days == 1:
             #if self.age >= STAGE_DAYS[BeeStage.HIBERNATION]:
                 # survival based on resources loaded
-                # TODO check plausibility
-                self.model.log(f"resources: {self.nectar} {sum(self.pollen.values())}")
-                if(
-                    (self.nectar >= self.hibernation_resources[0] and sum(self.pollen.values()) >= self.hibernation_resources[1]) or
-                    (self.model.random.random() < self.hibernation_survival_probability)
-                ):
-                    self.model.log(f"queen {self.unique_id} starts new colony")
-                    self.age = 1
-                    # new colony in random position
-                    colony = self.model.createNewColony(self)
-                    self.colony = colony
-                    self.model.grid.move_agent(self, self.colony.pos)
-                    self.bee_stage =  BeeStage.QUEEN
-                else:
-                    self.setBeeDead()
+                self.model.log(f"queen {self.unique_id} starts new colony")
+                self.age = 1
+                # new colony in random position
+                colony = self.model.createNewColony(self)
+                self.colony = colony
+                self.model.grid.move_agent(self, self.colony.pos)
+                self.bee_stage = BeeStage.QUEEN
 
     def setBeeDead(self):
         self.plant_stage = BeeStage.DEATH

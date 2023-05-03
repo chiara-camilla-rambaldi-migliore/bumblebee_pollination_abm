@@ -138,7 +138,8 @@ class GreenArea(Model):
                 BeeStage.QUEEN: 130
             },
             "steps_for_consfused_flower_visit": 3,
-            "max_collection_ratio": 1
+            "max_collection_ratio": 1,
+            "hibernation_survival_probability": 0.5
         },
         plant_params = {
             "nectar_storage": 100, 
@@ -159,6 +160,7 @@ class GreenArea(Model):
             "initial_seed_prod_prob": 0.2, #initial probability of seed production (it takes into account the wind and rain pollination)
             "max_seeds": 6, #maximum number of seeds produced by the flower
             "seed_prob": 0.6, #probability of a seed to become a flower
+            "max_gen_per_season": 2,
         },
         colony_params = {
             "nectar_consumption_per_bee": 0.7,
@@ -417,3 +419,7 @@ class GreenArea(Model):
 
     def log(self, message):
         logger.info(message)
+
+    def getHibernatedQueensQuantity(self):
+        queens = list(filter(lambda a: a.bee_type == BeeType.QUEEN and a.bee_stage == BeeStage.HIBERNATION, list(self.schedule.agents_by_type[BeeAgent].values())))
+        return len(queens)
