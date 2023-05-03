@@ -7,5 +7,9 @@ setup(name='bumblebee_pollination_abm',
       author='Chiara Camilla Rambaldi Migliore',
       author_email='cc.rambaldimigliore@studenti.unitn.it',
       license='MIT',
-      packages=['bumblebee_pollination_abm'],
+      packages=['bumblebee_pollination_abm', 'bumblebee_pollination_abm/CustomAgents'],
+      install_requires=[
+          'Mesa',
+          'numpy',
+      ],
       zip_safe=False)
