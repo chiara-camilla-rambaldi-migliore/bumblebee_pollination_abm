@@ -9,7 +9,7 @@ setup(name='bumblebee_pollination_abm',
       license='MIT',
       packages=['bumblebee_pollination_abm', 'bumblebee_pollination_abm/CustomAgents'],
       install_requires=[
-          'Mesa',
-          'numpy',
+          'Mesa>=1.1.1,<1.2.0',
+          'numpy>=1.24.1,<1.25.0',
       ],
       zip_safe=False)
