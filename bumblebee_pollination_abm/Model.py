@@ -386,7 +386,7 @@ class GreenArea(Model):
 
     def createNewColony(self, queen):
         pos = self.areaConstructor.getRandomPositionInWoods(self.random)
-        lambda_func = lambda a: not isinstance(a, TreeAgent)
+        lambda_func = lambda a: isinstance(a, ColonyAgent)
         agents_same_pos = self.grid.get_cell_custom_list_contents(lambda_func, pos)
         loop = 0
         while (len(agents_same_pos) > 0):
