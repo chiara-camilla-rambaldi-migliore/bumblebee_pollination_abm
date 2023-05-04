@@ -79,7 +79,10 @@ class AreaConstructor():
         total_area = (self.width*self.height)-wood_surface
         no_mow_area = self.no_mow_pc*total_area
         no_mow_area_height = floor((self.height*sqrt(no_mow_area)*2)/(self.width+self.height))
-        no_mow_area_width = floor(no_mow_area/no_mow_area_height)
+        try:
+            no_mow_area_width = floor(no_mow_area/no_mow_area_height)
+        except ZeroDivisionError:
+            no_mow_area_width = 0
         center = (floor(self.width/2), floor(self.height/2))
         return (
             (center[0]-floor(no_mow_area_width/2), center[1]-floor(no_mow_area_height/2)), 
@@ -98,7 +101,10 @@ class AreaConstructor():
         (r_max, t_max, l_max, d_max), wood_surface = self.getWoodBoundsAndSurface()
         total_area = (self.width*self.height)-wood_surface
         no_mow_area = self.no_mow_pc*total_area
-        no_mow_area_height = floor(no_mow_area/(2*(self.width-r_max-l_max)))
+        try:
+            no_mow_area_height = floor(no_mow_area/(2*(self.width-r_max-l_max)))
+        except ZeroDivisionError:
+            no_mow_area_height = 0
         start_of_no_mow_area = self.height-no_mow_area_height-t_max-1
         return ((l_max,start_of_no_mow_area), (self.width-1-r_max, self.height-1-t_max),
                 (l_max,d_max), (self.width-1-r_max, no_mow_area_height-1+d_max))
@@ -107,7 +113,10 @@ class AreaConstructor():
         (r_max, t_max, l_max, d_max), wood_surface = self.getWoodBoundsAndSurface()
         total_area = (self.width*self.height)-wood_surface
         no_mow_area = self.no_mow_pc*total_area
-        no_mow_area_height = floor(no_mow_area/(self.width-r_max-l_max))
+        try:
+            no_mow_area_height = floor(no_mow_area/(self.width-r_max-l_max))
+        except ZeroDivisionError:
+            no_mow_area_height = 0
         start_of_no_mow_area = self.height-no_mow_area_height-t_max-1
         return ((l_max,start_of_no_mow_area), (self.width-1-r_max, self.height-1-t_max))
     
@@ -115,21 +124,30 @@ class AreaConstructor():
         (r_max, t_max, l_max, d_max), wood_surface = self.getWoodBoundsAndSurface()
         total_area = (self.width*self.height)-wood_surface
         no_mow_area = self.no_mow_pc*total_area
-        no_mow_area_height = floor(no_mow_area/(self.width-r_max-l_max))
+        try:
+            no_mow_area_height = floor(no_mow_area/(self.width-r_max-l_max))
+        except ZeroDivisionError:
+            no_mow_area_height = 0
         return ((l_max,d_max), (self.width-1-r_max, no_mow_area_height-1+d_max))
 
     def getCoordForPlants6(self):
         (r_max, t_max, l_max, d_max), wood_surface = self.getWoodBoundsAndSurface()
         total_area = (self.width*self.height)-wood_surface
         no_mow_area = self.no_mow_pc*total_area
-        no_mow_area_width = floor(no_mow_area/(self.width-t_max-d_max))
+        try:
+            no_mow_area_width = floor(no_mow_area/(self.width-t_max-d_max))
+        except ZeroDivisionError:
+            no_mow_area_width = 0
         return ((l_max,d_max), (no_mow_area_width+l_max, self.height-1-t_max))
     
     def getCoordForPlants7(self):
         (r_max, t_max, l_max, d_max), wood_surface = self.getWoodBoundsAndSurface()
         total_area = (self.width*self.height)-wood_surface
         no_mow_area = self.no_mow_pc*total_area
-        no_mow_area_width = floor(no_mow_area/(self.width-t_max-d_max))
+        try:
+            no_mow_area_width = floor(no_mow_area/(self.width-t_max-d_max))
+        except ZeroDivisionError:
+            no_mow_area_width = 0
         start_of_no_mow_area = self.width-no_mow_area_width-r_max-1
         return ((start_of_no_mow_area, d_max), (self.width-1-r_max, self.height-1-t_max))
     
