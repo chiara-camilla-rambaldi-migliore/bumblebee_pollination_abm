@@ -1,6 +1,7 @@
 from mesa.time import RandomActivationByType
 from mesa.model import Model
 from mesa.agent import Agent
+from typing import List
 
 class RandomActivationByTypeOrdered(RandomActivationByType):
     def __init__(self, model: Model, daily_step: int = 0) -> None:
@@ -9,7 +10,7 @@ class RandomActivationByTypeOrdered(RandomActivationByType):
         self.years = 0
         self.daily_step = daily_step
 
-    def step(self, type_ordered_keys: list[type[Agent]], shuffle_agents: bool = True) -> None:
+    def step(self, type_ordered_keys: List[Agent], shuffle_agents: bool = True) -> None:
         """
         Executes the step of each agent type, one at a time decided by user, in possible random order.
 
@@ -40,7 +41,7 @@ class RandomActivationByTypeOrdered(RandomActivationByType):
         self.steps += 1
         self.time += 1
 
-    def daily_step_type(self, type_class: type[Agent], shuffle_agents: bool = True) -> None:
+    def daily_step_type(self, type_class: Agent, shuffle_agents: bool = True) -> None:
         """
         Shuffle order and run all agents of a given type.
         This method is equivalent to the NetLogo 'ask [breed]...'.
