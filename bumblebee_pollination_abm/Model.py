@@ -253,9 +253,9 @@ class GreenArea(Model):
 
         self.running = True
 
-        # self.datacollector_colonies.collect(self)
-        # self.datacollector_bumblebees.collect(self)
-        # self.datacollector_plants.collect(self)
+        self.datacollector_colonies.collect(self)
+        self.datacollector_bumblebees.collect(self)
+        self.datacollector_plants.collect(self)
 
     def createPlantAgents(self, x, y):
         plant_types = []
@@ -319,11 +319,11 @@ class GreenArea(Model):
                     if bumblebee.bee_stage == BeeStage.BEE and bumblebee.bee_type == BeeType.WORKER:
                         bumblebee.pesticideConfusion()
             
-        # self.datacollector_bumblebees.collect(self)
-        # self.datacollector_plants.collect(self)
+        self.datacollector_bumblebees.collect(self)
+        self.datacollector_plants.collect(self)
 
     def dailyStep(self):
-        # self.datacollector_colonies.collect(self)
+        self.datacollector_colonies.collect(self)
         pass
 
     def mowPark(self):
