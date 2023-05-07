@@ -390,9 +390,11 @@ class GreenArea(Model):
         agents_same_pos = self.grid.get_cell_custom_list_contents(lambda_func, pos)
         loop = 0
         while (len(agents_same_pos) > 0):
-            if(loop >= 10):
-                sys.exit("Infinite Loop")
-            self.log("possible infinite loop")
+            if(loop >= 15):
+                msg = "Infinite Loop"
+                msg += f"\nno_mow_pc: {self.no_mow_pc}, mowing_days: {self.mowing_days}, pesticide_days: {self.pesticide_days}, flower_area_type: {self.flower_area_type}"
+                msg += f"\nQueens: {self.getQueensQuantity()}"
+                sys.exit(msg)
             self.log(f"pos: {pos}, agents: {agents_same_pos}")
             pos = self.areaConstructor.getRandomPositionInWoods(self.random)
             loop += 1
@@ -422,4 +424,8 @@ class GreenArea(Model):
 
     def getHibernatedQueensQuantity(self):
         queens = list(filter(lambda a: a.bee_type == BeeType.QUEEN and a.bee_stage == BeeStage.HIBERNATION, list(self.schedule.agents_by_type[BeeAgent].values())))
+        return len(queens)
+    
+    def getQueensQuantity(self):
+        queens = list(filter(lambda a: a.bee_type == BeeType.QUEEN and a.bee_stage == BeeStage.QUEEN, list(self.schedule.agents_by_type[BeeAgent].values())))
         return len(queens)
