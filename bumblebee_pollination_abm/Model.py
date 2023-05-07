@@ -111,6 +111,7 @@ class GreenArea(Model):
             PlantType.AUTUMN_TYPE3: (0.4, 0.55)
         },
         woods_drawing = True,
+        data_collection = False,
         flower_area_type = FlowerAreaType.SOUTH_SECTION,
         bumblebee_params = {
             "max_memory": 10,
@@ -186,32 +187,34 @@ class GreenArea(Model):
         self.bumblebee_params = bumblebee_params
         self.plant_params = plant_params
         self.colony_params = colony_params
+        self.data_collection = data_collection
 
         self.areaConstructor = AreaConstructor(self.flower_area_type, self.height, self.width, self.no_mow_pc)
 
         self.schedule = RandomActivationByTypeOrdered(self, self.steps_per_day)
         self.grid = CustomMultiGrid(width, height, torus=False)
 
-        self.datacollector_colonies = CustomDataCollector(
-            [ColonyAgent],
-            agent_reporters={
-                "Nectar": "nectar",
-                "Pollen": "pollen"
-            }
-        )
-        self.datacollector_bumblebees = CustomDataCollector(
-            [BeeAgent],
-            model_reporters={"Intra/inter pollen": computeIntraInterPollen},
-        )
+        if self.data_collection:
+            self.datacollector_colonies = CustomDataCollector(
+                [ColonyAgent],
+                agent_reporters={
+                    "Nectar": "nectar",
+                    "Pollen": "pollen"
+                }
+            )
+            self.datacollector_bumblebees = CustomDataCollector(
+                [BeeAgent],
+                model_reporters={"Intra/inter pollen": computeIntraInterPollen},
+            )
 
-        self.datacollector_plants = CustomDataCollector(
-            [PlantAgent],
-            model_reporters={
-                "Seed Probability": computeSeedProducingProbability,
-                "Plant Nectar Average": computPlantNectarAverage,
-                "Plant Pollen Average": computPlantPollenAverage
-            }
-        )
+            self.datacollector_plants = CustomDataCollector(
+                [PlantAgent],
+                model_reporters={
+                    "Seed Probability": computeSeedProducingProbability,
+                    "Plant Nectar Average": computPlantNectarAverage,
+                    "Plant Pollen Average": computPlantPollenAverage
+                }
+            )
 
         # Set up agents
         # We use a grid iterator that returns
@@ -253,9 +256,10 @@ class GreenArea(Model):
 
         self.running = True
 
-        self.datacollector_colonies.collect(self)
-        self.datacollector_bumblebees.collect(self)
-        self.datacollector_plants.collect(self)
+        if self.data_collection:
+            self.datacollector_colonies.collect(self)
+            self.datacollector_bumblebees.collect(self)
+            self.datacollector_plants.collect(self)
 
     def createPlantAgents(self, x, y):
         plant_types = []
@@ -318,13 +322,14 @@ class GreenArea(Model):
                 for bumblebee in self.schedule.agents_by_type[BeeAgent].values():
                     if bumblebee.bee_stage == BeeStage.BEE and bumblebee.bee_type == BeeType.WORKER:
                         bumblebee.pesticideConfusion()
-            
-        self.datacollector_bumblebees.collect(self)
-        self.datacollector_plants.collect(self)
+
+        if self.data_collection:
+            self.datacollector_bumblebees.collect(self)
+            self.datacollector_plants.collect(self)
 
     def dailyStep(self):
-        self.datacollector_colonies.collect(self)
-        pass
+        if self.data_collection:
+            self.datacollector_colonies.collect(self)
 
     def mowPark(self):
         for cell in self.grid.coord_iter():

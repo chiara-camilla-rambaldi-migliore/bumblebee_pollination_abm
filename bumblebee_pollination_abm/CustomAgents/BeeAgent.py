@@ -213,7 +213,7 @@ class BeeAgent(Agent):
         (nect_cons, pol_cons) = self.colony.getConsumption()
         eggs = floor(min(min(colony_nectar/(20*nect_cons), self.max_egg), min(colony_pollen/(20*pol_cons), self.max_egg)))
         eggs = max(eggs, 0)
-        self.model.log(f"producing {eggs} eggs at age {self.age} with days per egg = {self.days_per_eggs}")
+        #self.model.log(f"producing {eggs} eggs at age {self.age} with days per egg = {self.days_per_eggs}")
         if eggs > 0:
             if self.age  < self.queen_male_production_period:
                 nest_bee_eggs = floor(self.nest_bees_percentage*eggs)
@@ -243,8 +243,8 @@ class BeeAgent(Agent):
                 self.model.log(f"created new queens: {new_queen_eggs}")
 
         
-        self.model.log(f"colony size: {len(self.colony.population)}")
-        self.model.log(f"colony resources: {self.colony.getResources()}")
+        #self.model.log(f"colony size: {len(self.colony.population)}")
+        #self.model.log(f"colony resources: {self.colony.getResources()}")
 
     def updateStage(self):
         if self.bee_stage == BeeStage.EGG:
