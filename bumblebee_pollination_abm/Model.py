@@ -390,18 +390,23 @@ class GreenArea(Model):
             self.schedule.add(bumblebee)
 
     def createNewColony(self, queen):
+        tried_positions = []
         pos = self.areaConstructor.getRandomPositionInWoods(self.random)
-        lambda_func = lambda a: isinstance(a, ColonyAgent)
-        agents_same_pos = self.grid.get_cell_custom_list_contents(lambda_func, pos)
+        tried_positions.append(pos)
+        colonies_pos = self.getColoniesPositions()
         loop = 0
-        while (len(agents_same_pos) > 0):
+        self.log(f"colonies_pos: {colonies_pos}, pos: {pos}")
+        while (pos in colonies_pos):
             if(loop >= 15):
                 msg = "Infinite Loop"
                 msg += f"\nno_mow_pc: {self.no_mow_pc}, mowing_days: {self.mowing_days}, pesticide_days: {self.pesticide_days}, flower_area_type: {self.flower_area_type}"
-                msg += f"\nQueens: {self.getQueensQuantity()}"
-                sys.exit(msg)
-            self.log(f"pos: {pos}, agents: {agents_same_pos}")
+                msg += f"\nColonies pos: {self.getColoniesPositions()}"
+                msg += f"\nTried positions: {tried_positions}"
+                self.log(msg)
+                break
+            self.log(f"colonies_pos: {colonies_pos}, pos: {pos}")
             pos = self.areaConstructor.getRandomPositionInWoods(self.random)
+            tried_positions.append(pos)
             loop += 1
 
         if queen.nectar > 19 and sum(queen.pollen.values()) > 20:
@@ -431,6 +436,7 @@ class GreenArea(Model):
         queens = list(filter(lambda a: a.bee_type == BeeType.QUEEN and a.bee_stage == BeeStage.HIBERNATION, list(self.schedule.agents_by_type[BeeAgent].values())))
         return len(queens)
     
-    def getQueensQuantity(self):
-        queens = list(filter(lambda a: a.bee_type == BeeType.QUEEN and a.bee_stage == BeeStage.QUEEN, list(self.schedule.agents_by_type[BeeAgent].values())))
-        return len(queens)
+    def getColoniesPositions(self):
+        colonies = list(self.schedule.agents_by_type[ColonyAgent].values())
+        positions = list(map(lambda a: a.pos, colonies))
+        return positions
