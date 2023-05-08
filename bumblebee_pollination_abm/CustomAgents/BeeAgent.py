@@ -107,6 +107,15 @@ class BeeAgent(Agent):
         self.initializePollen()
         self.collection_ratio = 0
         self.updateCollectionRatio()
+
+        self.stage_behaviors = {
+            BeeStage.EGG: lambda self: self.moveToNextStage(BeeStage.LARVAE),
+            BeeStage.LARVAE: lambda self: self.moveToNextStage(BeeStage.PUPA),
+            BeeStage.PUPA: lambda self: self.moveToNextStage(BeeStage.BEE),
+            BeeStage.BEE: lambda self: self.handleBeeStage(),
+            BeeStage.QUEEN: lambda self: self.handleQueenStage(),
+            BeeStage.HIBERNATION: lambda self: self.handleHibernationStage(),
+        }
     
     def __del__(self):
         pass#self.model.log("Deleted bumblebee", self.unique_id, self.bee_type.name)
@@ -130,29 +139,39 @@ class BeeAgent(Agent):
 
     def step(self):
         if(self.bee_stage != BeeStage.HIBERNATION):
-            # simulare viaggi (ogni tot step, torna alla colonia e deposita polline e nettare)
-            # males never return to the colony
-            if (
-                (self.model.schedule.steps != 0 and self.model.schedule.steps % self.steps_colony_return == 0 and self.bee_type != BeeType.MALE) or
-                (sum(self.pollen.values()) >= self.max_pollen_load)
-            ):
+            if self.shouldReturnToColony():
                 self.returnToColonyStep()
             else:
-                #colleziona polline e nettare dalla pianta in cui sono
-                # foraging workers, males and new queens
-                if(
-                    (
-                        (self.bee_type != BeeType.NEST_BEE and self.bee_stage == BeeStage.BEE) or
-                        (self.bee_type == BeeType.QUEEN and self.age < self.queen_foraging_days and self.bee_stage == BeeStage.QUEEN)
-                    ) and
-                    (
-                        (not self.confused) or 
-                        self.model.schedule.steps % self.steps_for_consfused_flower_visit == 0
-                    )
-                ):
-                    self.updatePollenNectarMemory()
-                    newPosition = self.getNewPosition()
-                    self.model.grid.move_agent(self, newPosition)
+                if self.shouldCollectPollenAndNectar():
+                    self.collectPollenAndNectar()
+
+    def shouldReturnToColony(self):
+        # simulare viaggi (ogni tot step, torna alla colonia e deposita polline e nettare)
+        # males never return to the colony
+        return (
+            (self.model.schedule.steps != 0 and self.model.schedule.steps % self.steps_colony_return == 0 and self.bee_type != BeeType.MALE) or
+            (sum(self.pollen.values()) >= self.max_pollen_load)
+        )
+
+    def shouldCollectPollenAndNectar(self):
+        #colleziona polline e nettare dalla pianta in cui sono
+        # foraging workers, males and new queens
+        return (
+            (
+                (self.bee_type != BeeType.NEST_BEE and self.bee_stage == BeeStage.BEE) or
+                (self.bee_type == BeeType.QUEEN and self.age < self.queen_foraging_days and self.bee_stage == BeeStage.QUEEN)
+            ) and
+            (
+                (not self.confused) or 
+                self.model.schedule.steps % self.steps_for_consfused_flower_visit == 0
+            )
+        )
+
+    def collectPollenAndNectar(self):
+        self.updatePollenNectarMemory()
+        newPosition = self.getNewPosition()
+        self.model.grid.move_agent(self, newPosition)
+
 
     def returnToColonyStep(self):
         plant_in_same_position = self.model.grid.get_cell_plant_list_contents(self.pos)
@@ -215,22 +234,15 @@ class BeeAgent(Agent):
         eggs = max(eggs, 0)
         #self.model.log(f"producing {eggs} eggs at age {self.age} with days per egg = {self.days_per_eggs}")
         if eggs > 0:
-            if self.age  < self.queen_male_production_period:
+            if self.age < self.queen_male_production_period:
                 nest_bee_eggs = floor(self.nest_bees_percentage*eggs)
                 worker_eggs = eggs-nest_bee_eggs
                 self.model.createNewBumblebees(nest_bee_eggs, BeeType.NEST_BEE, self)
                 self.model.createNewBumblebees(worker_eggs, BeeType.WORKER, self)
             else:
                 # quantità nuove regine basata su quantità workers nella colonia
-                if self.colony.getSize() == ColonySize.SMALL:
-                    male_percentage = 0
-                    new_queens_percentage = 0
-                elif self.colony.getSize() == ColonySize.MEDIUM:
-                    male_percentage = self.male_percentage
-                    new_queens_percentage = 0
-                elif self.colony.getSize() == ColonySize.BIG:
-                    male_percentage = self.male_percentage
-                    new_queens_percentage = self.new_queens_percentage
+                male_percentage = 0 if self.colony.size == ColonySize.SMALL else self.male_percentage
+                new_queens_percentage = self.new_queens_percentage if self.colony.getSize() == ColonySize.BIG else 0
 
                 male_eggs = floor(male_percentage*eggs)
                 new_queen_eggs = floor(new_queens_percentage*eggs)
@@ -247,59 +259,50 @@ class BeeAgent(Agent):
         #self.model.log(f"colony resources: {self.colony.getResources()}")
 
     def updateStage(self):
-        if self.bee_stage == BeeStage.EGG:
-            if self.age >= self.stage_days[BeeStage.EGG]:
-                self.age = 0
-                self.bee_stage = BeeStage.LARVAE
+        behavior = self.stage_behaviors.get(self.bee_stage)
+        if behavior is not None:
+            behavior(self)
 
-        elif self.bee_stage == BeeStage.LARVAE:
-            if self.age >= self.stage_days[BeeStage.LARVAE]:
+    def handleBeeStage(self):
+        if self.age >= self.stage_days[BeeStage.BEE][self.bee_type]:
+            if(
+                self.bee_type == BeeType.QUEEN and 
+                self.mated and 
+                (
+                    (self.nectar >= self.hibernation_resources[0] and sum(self.pollen.values()) >= self.hibernation_resources[1]) or
+                    (self.model.random.random() < self.hibernation_survival_probability)
+                )
+            ):
+                self.model.log(f"resources: {self.nectar} {sum(self.pollen.values())}")
+                self.bee_stage = BeeStage.HIBERNATION
                 self.age = 0
-                self.bee_stage =  BeeStage.PUPA
-                
-        elif self.bee_stage == BeeStage.PUPA:
-            if self.age >= self.stage_days[BeeStage.PUPA]:
-                self.age = 0
-                self.bee_stage =  BeeStage.BEE
-                
-        elif self.bee_stage == BeeStage.BEE:
-            if self.age >= self.stage_days[BeeStage.BEE][self.bee_type]:
-                if(
-                    self.bee_type == BeeType.QUEEN and 
-                    self.mated and 
-                    (
-                        (self.nectar >= self.hibernation_resources[0] and sum(self.pollen.values()) >= self.hibernation_resources[1]) or
-                        (self.model.random.random() < self.hibernation_survival_probability)
-                    )
-                ):
-                    self.model.log(f"resources: {self.nectar} {sum(self.pollen.values())}")
-                    self.bee_stage = BeeStage.HIBERNATION
-                    self.age = 0
-                    if self.colony is not None:
-                        self.colony.removeBee(self)
-                        self.colony = None
-                    self.model.log(f"New queen {self.unique_id} is hibernating")
-                else:
-                    self.bee_stage =  BeeStage.DEATH
-                    self.setBeeDead()
-
-        elif self.bee_stage == BeeStage.QUEEN:  
-            if self.age >= self.stage_days[BeeStage.QUEEN]:
+                if self.colony is not None:
+                    self.colony.removeBee(self)
+                    self.colony = None
+                self.model.log(f"New queen {self.unique_id} is hibernating")
+            else:
                 self.bee_stage =  BeeStage.DEATH
                 self.setBeeDead()
-                #self.colony.setColonyDead()
-        
-        elif self.bee_stage == BeeStage.HIBERNATION:
-            if self.model.schedule.days == 1:
-            #if self.age >= STAGE_DAYS[BeeStage.HIBERNATION]:
-                # survival based on resources loaded
-                self.model.log(f"queen {self.unique_id} starts new colony")
-                self.age = 1
-                # new colony in random position
-                colony = self.model.createNewColony(self)
-                self.colony = colony
-                self.model.grid.move_agent(self, self.colony.pos)
-                self.bee_stage = BeeStage.QUEEN
+
+    def handleQueenStage(self):
+        if self.age >= self.stage_days[BeeStage.QUEEN]:
+                self.bee_stage =  BeeStage.DEATH
+                self.setBeeDead()
+
+    def handleHibernationStage(self):
+        if self.model.schedule.days == 1:
+            self.model.log(f"queen {self.unique_id} starts new colony")
+            self.age = 1
+            # new colony in random position
+            colony = self.model.createNewColony(self)
+            self.colony = colony
+            self.model.grid.move_agent(self, self.colony.pos)
+            self.bee_stage = BeeStage.QUEEN
+
+    def moveToNextStage(self, next_stage):
+        if self.age >= self.stage_days[self.bee_stage]:
+            self.age = 0
+            self.bee_stage = next_stage
 
     def setBeeDead(self):
         self.plant_stage = BeeStage.DEATH
@@ -325,6 +328,27 @@ class BeeAgent(Agent):
         if(len(self.rewarded_memory) > self.max_memory):
             self.rewarded_memory.pop(0)
 
+    def choosePlantToVisit(self, neighbors, plant_types):
+        newPosition = neighbors[np.random.randint(0, len(neighbors))].pos
+        if(not self.sampling_mode):
+            plantMeanRewards = self.getPlantMeanRewards()
+            if(len(plantMeanRewards) > 0):
+                plantMaxReward = dict(filter(lambda pair: pair[1] > 0 and pair[0] in plant_types, plantMeanRewards.items())) #filtra per quelli > 0 e con plant type presente nel vicinato
+                plantMaxReward = [key for key, value in plantMaxReward.items() if value == max(plantMaxReward.values())]
+                if (max_rew_len := len(plantMaxReward)) > 0:
+                    if max_rew_len > 1:
+                        plantMaxReward = plantMaxReward[np.random.randint(0, max_rew_len)]
+                    else:
+                        plantMaxReward = plantMaxReward[0]
+                    plants_to_choose = list(filter(lambda n: n.plant_type == plantMaxReward, neighbors))
+                    if (plant_len := len(plants_to_choose)) > 1:
+                        plants_to_choose = plants_to_choose[np.random.randint(0, plant_len)]
+                    else:
+                        plants_to_choose = plants_to_choose[0]
+                    newPosition = plants_to_choose.pos
+
+        return newPosition
+
 
     def getNewPosition(self):
         # guarda per ogni pianta se è nella memoria del bombo e scegli di visitare quella con reward maggiore e spostati in quella posizione
@@ -337,26 +361,7 @@ class BeeAgent(Agent):
         neighborhood = self.model.grid.get_neighborhood(self.pos, True, radius = 10)
         newPosition = neighborhood[np.random.randint(0, len(neighborhood))]
         if (len(neighbors) > 0):
-            if(not self.sampling_mode):
-                plantMeanRewards = self.getPlantMeanRewards()
-                if(len(plantMeanRewards) > 0):
-                    plantMaxReward = dict(filter(lambda pair: pair[1] > 0 and pair[0] in plant_types, plantMeanRewards.items())) #filtra per quelli > 0 e con plant type presente nel vicinato
-                    plantMaxReward = [key for key, value in plantMaxReward.items() if value == max(plantMaxReward.values())]
-                    if (max_rew_len := len(plantMaxReward)) > 0:
-                        if max_rew_len > 1:
-                            plantMaxReward = plantMaxReward[np.random.randint(0, max_rew_len)]
-                        else:
-                            plantMaxReward = plantMaxReward[0]
-                        plants_to_choose = list(filter(lambda n: n.plant_type == plantMaxReward, neighbors))
-                        if (plant_len := len(plants_to_choose)) > 1:
-                            plants_to_choose = plants_to_choose[np.random.randint(0, plant_len)]
-                        else:
-                            plants_to_choose = plants_to_choose[0]
-                        newPosition = plants_to_choose.pos
-                else:
-                    newPosition = neighbors[np.random.randint(0, len(neighbors))].pos
-            else:
-                newPosition = neighbors[np.random.randint(0, len(neighbors))].pos
+            self.choosePlantToVisit(neighbors, plant_types)
 
         elif self.last_flower_position is not None:
             # vado nel posto in cui ero prima di tornare al nido
