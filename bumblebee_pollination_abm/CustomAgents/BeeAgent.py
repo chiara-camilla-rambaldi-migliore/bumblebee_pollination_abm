@@ -108,15 +108,6 @@ class BeeAgent(Agent):
         self.initializePollen()
         self.collection_ratio = 0
         self.updateCollectionRatio()
-
-        self.stage_behaviors = {
-            BeeStage.EGG: lambda self: self.moveToNextStage(BeeStage.LARVAE),
-            BeeStage.LARVAE: lambda self: self.moveToNextStage(BeeStage.PUPA),
-            BeeStage.PUPA: lambda self: self.moveToNextStage(BeeStage.BEE),
-            BeeStage.BEE: lambda self: self.handleBeeStage(),
-            BeeStage.QUEEN: lambda self: self.handleQueenStage(),
-            BeeStage.HIBERNATION: lambda self: self.handleHibernationStage(),
-        }
     
     def __del__(self):
         pass#self.model.log("Deleted bumblebee", self.unique_id, self.bee_type.name)
@@ -260,9 +251,18 @@ class BeeAgent(Agent):
         #self.model.log(f"colony resources: {self.colony.getResources()}")
 
     def updateStage(self):
-        behavior = self.stage_behaviors.get(self.bee_stage)
-        if behavior is not None:
-            behavior(self)
+        if self.bee_stage == BeeStage.EGG:
+            self.moveToNextStage(BeeStage.LARVAE)
+        elif self.bee_stage == BeeStage.LARVAE:
+            self.moveToNextStage(BeeStage.PUPA)
+        elif self.bee_stage == BeeStage.PUPA:
+            self.moveToNextStage(BeeStage.BEE)
+        elif self.bee_stage == BeeStage.BEE:
+            self.handleBeeStage()
+        elif self.bee_stage == BeeStage.QUEEN:
+            self.handleQueenStage()
+        elif self.bee_stage == BeeStage.HIBERNATION:
+            self.handleHibernationStage()
 
     def handleBeeStage(self):
         if self.age >= self.stage_days[BeeStage.BEE][self.bee_type]:
