@@ -2,6 +2,7 @@ from mesa.agent import Agent
 import numpy as np
 from math import floor
 from bumblebee_pollination_abm.Utils import BeeStage, BeeType, PlantType, ColonySize
+from typing import Dict
 
 
 
@@ -218,7 +219,7 @@ class BeeAgent(Agent):
 
     def mating(self):
         # TODO check plausibility
-        available_queens = list(filter(lambda a: a.bee_type == BeeType.QUEEN and a.bee_stage == BeeStage.BEE and (not a.mated), self.model.schedule.agents_by_type[BeeAgent].values()))
+        available_queens = [a for a in self.model.schedule.agents_by_type[BeeAgent].values() if a.bee_type == BeeType.QUEEN and a.bee_stage == BeeStage.BEE and (not a.mated)]
         if len(available_queens) > 0:
             self.model.random.shuffle(available_queens)
             queen = available_queens.pop()
@@ -241,7 +242,7 @@ class BeeAgent(Agent):
                 self.model.createNewBumblebees(worker_eggs, BeeType.WORKER, self)
             else:
                 # quantità nuove regine basata su quantità workers nella colonia
-                male_percentage = 0 if self.colony.size == ColonySize.SMALL else self.male_percentage
+                male_percentage = 0 if self.colony.getSize() == ColonySize.SMALL else self.male_percentage
                 new_queens_percentage = self.new_queens_percentage if self.colony.getSize() == ColonySize.BIG else 0
 
                 male_eggs = floor(male_percentage*eggs)
@@ -328,21 +329,17 @@ class BeeAgent(Agent):
         if(len(self.rewarded_memory) > self.max_memory):
             self.rewarded_memory.pop(0)
 
-    def choosePlantToVisit(self, neighbors, plant_types):
-        newPosition = neighbors[np.random.randint(0, len(neighbors))].pos
+    def choosePlantToVisit(self, neighbors):
+        newPosition = neighbors[self.model.random.randint(0, len(neighbors))].pos
         if(not self.sampling_mode):
             plantMeanRewards = self.getPlantMeanRewards()
             if(len(plantMeanRewards) > 0):
-                plantMaxReward = dict(filter(lambda pair: pair[1] > 0 and pair[0] in plant_types, plantMeanRewards.items())) #filtra per quelli > 0 e con plant type presente nel vicinato
-                plantMaxReward = [key for key, value in plantMaxReward.items() if value == max(plantMaxReward.values())]
-                if (max_rew_len := len(plantMaxReward)) > 0:
-                    if max_rew_len > 1:
-                        plantMaxReward = plantMaxReward[np.random.randint(0, max_rew_len)]
-                    else:
-                        plantMaxReward = plantMaxReward[0]
-                    plants_to_choose = list(filter(lambda n: n.plant_type == plantMaxReward, neighbors))
-                    if (plant_len := len(plants_to_choose)) > 1:
-                        plants_to_choose = plants_to_choose[np.random.randint(0, plant_len)]
+                plant_types = {n.plant_type for n in neighbors}
+                plantMaxReward = max(((k, v) for k, v in plantMeanRewards.items() if v > 0 and k in plant_types), default=None, key=lambda x: x[1])
+                if plantMaxReward is not None:
+                    plants_to_choose = [n for n in neighbors if n.plant_type == plantMaxReward[0]]
+                    if (len(plants_to_choose)) > 1:
+                        plants_to_choose = plants_to_choose[self.model.random.randint(0, len(plants_to_choose))]
                     else:
                         plants_to_choose = plants_to_choose[0]
                     newPosition = plants_to_choose.pos
@@ -353,32 +350,33 @@ class BeeAgent(Agent):
     def getNewPosition(self):
         # guarda per ogni pianta se è nella memoria del bombo e scegli di visitare quella con reward maggiore e spostati in quella posizione
         neighbors = self.model.grid.get_plant_neighbors(self.pos, True, radius=10)
-        plant_types = []
-        for plant in neighbors:
-            if plant.plant_type not in plant_types:
-                plant_types.append(plant.plant_type)
 
-        neighborhood = self.model.grid.get_neighborhood(self.pos, True, radius = 10)
-        newPosition = neighborhood[np.random.randint(0, len(neighborhood))]
         if (len(neighbors) > 0):
-            self.choosePlantToVisit(neighbors, plant_types)
+            newPosition = self.choosePlantToVisit(neighbors)
 
         elif self.last_flower_position is not None:
             # vado nel posto in cui ero prima di tornare al nido
             # simulo una memoria del posto che ha dato maggior reward, ogni volta che ritornano al nido per depositare le risorse,
             # si recano successivamente verso quell'aiuola
             newPosition = (self.last_flower_position)
+
+        else:
+            neighborhood = self.model.grid.get_neighborhood(self.pos, True, radius = 10)
+            newPosition = neighborhood[self.model.random.randint(0, len(neighborhood))]
+
             
             
         return newPosition
 
-    def getPlantMeanRewards(self):
+    def getPlantMeanRewards(self) -> Dict[PlantType, float]:
         plantMeanRewards = {}
-        if len(self.rewarded_memory) > 0:
-            for (plant_type, reward) in self.rewarded_memory:
-                if(plant_type not in plantMeanRewards):
-                    plantMeanRewards[plant_type] = []
-                plantMeanRewards[plant_type].append(reward)
-            plantMeanRewards = {key: np.mean(np.array(plantMeanRewards[key])) for key in plantMeanRewards}
+        if not self.rewarded_memory:
+            return plantMeanRewards
         
-        return plantMeanRewards
+        for plant_type, reward in self.rewarded_memory:
+            if plant_type not in plantMeanRewards:
+                plantMeanRewards[plant_type] = [reward]
+            else:
+                plantMeanRewards[plant_type].append(reward)
+        
+        return {key: np.mean(plantMeanRewards[key]) for key in plantMeanRewards}

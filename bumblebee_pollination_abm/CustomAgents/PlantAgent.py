@@ -1,5 +1,4 @@
 import mesa
-import numpy as np
 from bumblebee_pollination_abm.Utils import PlantStage, PlantType, Season
 from math import floor
 from typing import Tuple
@@ -71,8 +70,6 @@ class PlantAgent(mesa.Agent):
             # nettare e polline si ricaricano anche ad ogni step (poco)
             self.resourcesRecharge(self.nectar_step_recharge, self.pollen_step_recharge)
 
-        pass
-
     def dailyStep(self):
         self.age += 1
         self.updateStage()
@@ -137,7 +134,7 @@ class PlantAgent(mesa.Agent):
     '''
     def getNectar(self, ratio):
         if self.plant_stage == PlantStage.FLOWER:
-            nectar_reward = np.random.uniform(self.reward[0], self.reward[1])*ratio
+            nectar_reward = self.model.random.uniform(self.reward[0], self.reward[1])*ratio
             if (self.nectar_storage > nectar_reward):
                 self.nectar_storage -= nectar_reward
             else:
@@ -154,7 +151,7 @@ class PlantAgent(mesa.Agent):
     '''
     def getPollen(self, ratio):
         if self.plant_stage == PlantStage.FLOWER:
-            pollen_reward = np.random.uniform(0.5, 0.8)*ratio
+            pollen_reward = self.model.random.uniform(0.5, 0.8)*ratio
             if (self.pollen_storage > pollen_reward):
                 self.pollen_storage -= pollen_reward
             else:

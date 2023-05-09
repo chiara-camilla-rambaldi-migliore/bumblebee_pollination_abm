@@ -206,16 +206,16 @@ class AreaConstructor():
         (r_max, t_max, l_max, d_max), wood_surface = self.getWoodBoundsAndSurface()
         rand = random.random()
         if rand < 0.25:
-            x = random.randint(self.width-r_max, self.width-1)
-            y = random.randint(0, self.height-1)
+            x = random.randint(self.width-r_max, self.width)
+            y = random.randint(0, self.height)
         elif rand < 0.5: 
-            x = random.randint(0, l_max-1)
-            y = random.randint(0, self.height-1)
+            x = random.randint(0, l_max)
+            y = random.randint(0, self.height)
         elif rand < 0.75:
-            x = random.randint(0, self.width-1)
-            y = random.randint(self.height-t_max, self.height-1)
+            x = random.randint(0, self.width)
+            y = random.randint(self.height-t_max, self.height)
         else: 
-            x = random.randint(0, self.width-1)
-            y = random.randint(0, d_max-1)
+            x = random.randint(0, self.width)
+            y = random.randint(0, d_max)
         
         return (x,y)

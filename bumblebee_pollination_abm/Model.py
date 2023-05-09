@@ -5,13 +5,13 @@ from bumblebee_pollination_abm.CustomAgents import PlantAgent, BeeAgent, ColonyA
 from bumblebee_pollination_abm.CustomTime import RandomActivationByTypeOrdered
 from bumblebee_pollination_abm.CustomDataCollector import CustomDataCollector
 from bumblebee_pollination_abm.setup_logger import logger
-import sys
+import numpy as np
 
 
 def computeIntraInterPollen(model):
     rs = []
-    active_bumblebees = filter(lambda a: a.bee_stage == BeeStage.BEE or a.bee_stage == BeeStage.QUEEN, model.schedule.agents_by_type[BeeAgent].values())
-    active_plants = list(filter(lambda a: a.plant_stage == PlantStage.FLOWER, model.schedule.agents_by_type[PlantAgent].values()))
+    active_bumblebees = [a for a in model.schedule.agents_by_type[BeeAgent].values() if a.bee_stage in (BeeStage.BEE, BeeStage.QUEEN)]
+    active_plants = [a for a in model.schedule.agents_by_type[PlantAgent].values() if a.plant_stage == PlantStage.FLOWER]
     if len(active_plants) == 0:
         return 0
     plant_types = []
@@ -167,10 +167,12 @@ class GreenArea(Model):
             "nectar_consumption_per_bee": 0.7,
             "pollen_consumption_per_bee": 0.7,
             "days_till_death": 4
-        }
+        },
+        seed = 23
     ):
         """ """
         #parameters
+        self.random = np.random.RandomState(seed)
         self.type_ordered_keys = self.getOrderedKeys()
         self.width = width
         self.height = height
@@ -226,18 +228,19 @@ class GreenArea(Model):
         self.tree_id = 0
         self.plant_types_quantity = 2
         (r_max, t_max, l_max, d_max), wood_surface = self.areaConstructor.getWoodBoundsAndSurface()
-        for _, x, y in self.grid.coord_iter():
-            if self.areaConstructor.isPointInFlowerArea((x,y)):
-                self.createPlantAgents(x, y)
-
-            if (self.woods_drawing and self.areaConstructor.isPointInWoodsArea((x,y))):
-                # solo per poter disegnare il bosco
-                tree_agent = TreeAgent(self.tree_id, self)
-                self.grid.place_agent(tree_agent, (x, y))
-                self.schedule.add(tree_agent)
-                self.tree_id += 1
+        self.createAllPlants()
                 
-        for _ in range(self.queens_quantity):
+        self.createAllBumblebees()
+
+        self.running = True
+
+        if self.data_collection:
+            self.datacollector_colonies.collect(self)
+            self.datacollector_bumblebees.collect(self)
+            self.datacollector_plants.collect(self)
+
+    def createAllBumblebees(self):
+        for _ in np.arange(self.queens_quantity):
             # metti i nidi dei bombi ai bordi del parco dove c'è il bosco 
             self.bumblebee_params["max_collection_ratio"] = self.random.uniform(0.8, 1)
             queen_agent = BeeAgent(
@@ -254,12 +257,17 @@ class GreenArea(Model):
             self.grid.place_agent(queen_agent, colony_agent.pos)
             self.schedule.add(queen_agent)
 
-        self.running = True
+    def createAllPlants(self):
+        for _, x, y in self.grid.coord_iter():
+            if self.areaConstructor.isPointInFlowerArea((x,y)):
+                self.createPlantAgents(x, y)
 
-        if self.data_collection:
-            self.datacollector_colonies.collect(self)
-            self.datacollector_bumblebees.collect(self)
-            self.datacollector_plants.collect(self)
+            if (self.woods_drawing and self.areaConstructor.isPointInWoodsArea((x,y))):
+                # solo per poter disegnare il bosco
+                tree_agent = TreeAgent(self.tree_id, self)
+                self.grid.place_agent(tree_agent, (x, y))
+                self.schedule.add(tree_agent)
+                self.tree_id += 1
 
     def createPlantAgents(self, x, y):
         plant_types = []
@@ -319,9 +327,7 @@ class GreenArea(Model):
                 self.mowPark()
             # dezanzarizzazione con conseguente stordimento del bombo
             if (self.schedule.days % self.pesticide_days == 0 and self.schedule.steps % self.steps_per_day == 0):
-                for bumblebee in self.schedule.agents_by_type[BeeAgent].values():
-                    if bumblebee.bee_stage == BeeStage.BEE and bumblebee.bee_type == BeeType.WORKER:
-                        bumblebee.pesticideConfusion()
+                self.pesticideEffects()
 
         if self.data_collection:
             self.datacollector_bumblebees.collect(self)
@@ -331,30 +337,33 @@ class GreenArea(Model):
         if self.data_collection:
             self.datacollector_colonies.collect(self)
 
+    
+    def pesticideEffects(self):
+        for bumblebee in self.schedule.agents_by_type[BeeAgent].values():
+            if bumblebee.bee_stage == BeeStage.BEE and bumblebee.bee_type == BeeType.WORKER:
+                bumblebee.pesticideConfusion()
+
+
+    
     def mowPark(self):
         for cell in self.grid.coord_iter():
             x = cell[1]
             y = cell[2]
             if not self.areaConstructor.isPointInFlowerArea((x,y)):
-                plants = list(filter(lambda a: (isinstance(a, PlantAgent) and a.plant_stage == PlantStage.FLOWER), self.grid[x][y]))
+                plants = [a for a in self.grid[x][y] if isinstance(a, PlantAgent) and a.plant_stage == PlantStage.FLOWER]
                 for plant in plants:
                     plant.setPlantDead()
 
     def createNewFlowers(self, qty: int, parent: PlantAgent, seed_age: int, generation: int):
         # parto dal neighborhood del fiore per mettere i semi
         radius = 6
-        neighbors = self.grid.get_neighbor_cells_suitable_for_seeds(self.areaConstructor, parent.plant_season, parent.pos, True, radius = radius)
-
-        while len(neighbors) < qty and radius < 10:
-            #self.log("infinite loop potential")
-            radius += 1
-            neighbors = self.grid.get_neighbor_cells_suitable_for_seeds(self.areaConstructor, parent.plant_season, parent.pos, True, radius = radius)
+        neighbors = self.getFlowerNeighbors(qty, parent, radius)
         
         qty = min(len(neighbors), qty)
         
         self.random.shuffle(neighbors)
 
-        for i in range(qty):
+        for i in np.arange(qty):
             x, y = neighbors[i]
             agent = PlantAgent(
                 self.plant_id, 
@@ -373,8 +382,19 @@ class GreenArea(Model):
         
         #self.log(f"Day {self.schedule.days}: Created {qty} plants of type {parent.plant_type.name}, and seed age of {seed_age} days")
 
+    
+    def getFlowerNeighbors(self, qty, parent, radius):
+        neighbors = self.grid.get_neighbor_cells_suitable_for_seeds(self.areaConstructor, parent.plant_season, parent.pos, True, radius = radius)
+
+        while len(neighbors) < qty and radius < 10:
+            #self.log("infinite loop potential")
+            radius += 1
+            neighbors = self.grid.get_neighbor_cells_suitable_for_seeds(self.areaConstructor, parent.plant_season, parent.pos, True, radius = radius)
+
+        return neighbors
+
     def createNewBumblebees(self, qty, bumblebee_type: BeeType, parent: BeeAgent):
-        for _ in range (qty):
+        for _ in np.arange (qty):
             self.bumblebee_params["max_collection_ratio"] = self.random.uniform(0.8, 1)
             bumblebee = BeeAgent(
                 self.bee_id, 
@@ -390,24 +410,7 @@ class GreenArea(Model):
             self.schedule.add(bumblebee)
 
     def createNewColony(self, queen):
-        tried_positions = []
-        pos = self.areaConstructor.getRandomPositionInWoods(self.random)
-        tried_positions.append(pos)
-        colonies_pos = self.getColoniesPositions()
-        loop = 0
-        self.log(f"colonies_pos: {colonies_pos}, pos: {pos}")
-        while (pos in colonies_pos):
-            if(loop >= 15):
-                msg = "Infinite Loop"
-                msg += f"\nno_mow_pc: {self.no_mow_pc}, mowing_days: {self.mowing_days}, pesticide_days: {self.pesticide_days}, flower_area_type: {self.flower_area_type}"
-                msg += f"\nColonies pos: {self.getColoniesPositions()}"
-                msg += f"\nTried positions: {tried_positions}"
-                self.log(msg)
-                break
-            self.log(f"colonies_pos: {colonies_pos}, pos: {pos}")
-            pos = self.areaConstructor.getRandomPositionInWoods(self.random)
-            tried_positions.append(pos)
-            loop += 1
+        pos = self.getNewColonyPosition()
 
         if queen.nectar > 19 and sum(queen.pollen.values()) > 20:
             self.colony_params["days_till_death"] = 6
@@ -423,6 +426,29 @@ class GreenArea(Model):
         colony_agent.setQueen(queen)
         return colony_agent
         
+    
+    def getNewColonyPosition(self):
+        tried_positions = []
+        pos = self.areaConstructor.getRandomPositionInWoods(self.random)
+        tried_positions.append(pos)
+        colonies_pos = self.getColoniesPositions()
+        loop = 0
+        #self.log(f"colonies_pos: {colonies_pos}, pos: {pos}")
+        while (pos in colonies_pos):
+            if(loop >= 15):
+                msg = "Infinite Loop"
+                msg += f"\nno_mow_pc: {self.no_mow_pc}, mowing_days: {self.mowing_days}, pesticide_days: {self.pesticide_days}, flower_area_type: {self.flower_area_type}"
+                msg += f"\nColonies pos: {colonies_pos}"
+                msg += f"\nTried positions: {tried_positions}"
+                self.log(msg)
+                break
+            #self.log(f"colonies_pos: {colonies_pos}, pos: {pos}")
+            pos = self.areaConstructor.getRandomPositionInWoods(self.random)
+            tried_positions.append(pos)
+            loop += 1
+
+        return pos
+
     def removeDeceasedAgent(self, agent):
         self.grid.remove_agent(agent)
         self.schedule.remove(agent)
@@ -433,10 +459,9 @@ class GreenArea(Model):
         logger.info(message)
 
     def getHibernatedQueensQuantity(self):
-        queens = list(filter(lambda a: a.bee_type == BeeType.QUEEN and a.bee_stage == BeeStage.HIBERNATION, list(self.schedule.agents_by_type[BeeAgent].values())))
+        queens = [a for a in self.schedule.agents_by_type[BeeAgent].values() if a.bee_type == BeeType.QUEEN and a.bee_stage == BeeStage.HIBERNATION]
         return len(queens)
     
     def getColoniesPositions(self):
-        colonies = list(self.schedule.agents_by_type[ColonyAgent].values())
-        positions = list(map(lambda a: a.pos, colonies))
+        positions = [a.pos for a in self.schedule.agents_by_type[ColonyAgent].values()]
         return positions
