@@ -46,11 +46,11 @@ def agents_draw(agent):
     if agent is None:
         return
 
-    if isinstance(agent, PlantAgent):
+    if agent.agent_type == "plant":
         portrayal = portrayal_flower[agent.plant_stage][agent.plant_type]
-    elif isinstance(agent, BeeAgent):
+    elif agent.agent_type == "bee":
         portrayal = portrayal_bee[agent.bee_type]
-    elif isinstance(agent, ColonyAgent):
+    elif agent.agent_type == "colony":
         portrayal = portrayal_colony
     else:
         portrayal = portrayal_tree

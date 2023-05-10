@@ -11,6 +11,7 @@ class ColonyAgent(mesa.Agent):
             days_till_death = 4
         ):
         super().__init__(f"colony_{id}", model)
+        self.agent_type = "colony"
         self.nectar = 0
         self.pollen = 0
         self.nectar_consumption_per_bee = nectar_consumption_per_bee

@@ -350,7 +350,7 @@ class GreenArea(Model):
             x = cell[1]
             y = cell[2]
             if not self.areaConstructor.isPointInFlowerArea((x,y)):
-                plants = [a for a in self.grid[x][y] if isinstance(a, PlantAgent) and a.plant_stage == PlantStage.FLOWER]
+                plants = [a for a in self.grid[x][y] if a.agent_type == "plant" and a.plant_stage == PlantStage.FLOWER]
                 for plant in plants:
                     plant.setPlantDead()
 
@@ -452,7 +452,7 @@ class GreenArea(Model):
     def removeDeceasedAgent(self, agent):
         self.grid.remove_agent(agent)
         self.schedule.remove(agent)
-        if(isinstance(agent, ColonyAgent)):
+        if(agent.agent_type == "colony"):
             self.log(f"Colony {agent.unique_id} died")
 
     def log(self, message):

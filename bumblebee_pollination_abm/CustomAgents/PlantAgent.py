@@ -38,6 +38,7 @@ class PlantAgent(mesa.Agent):
             gen_number = 1
         ):        
         super().__init__(f"plant_{id}", model)
+        self.agent_type = "plant"
         self.nectar_step_recharge = nectar_step_recharge #amount of recharge after a step
         self.pollen_step_recharge = pollen_step_recharge #amount of recharge after a step
         self.flower_age = flower_age

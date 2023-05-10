@@ -66,6 +66,7 @@ class BeeAgent(Agent):
            max_memory: maximum number of reward remembered by the bee.
         """
         super().__init__(f"bee_{id}", model)
+        self.agent_type = "bee"
         self.days_till_sampling_mode = days_till_sampling_mode
         self.steps_colony_return = steps_colony_return # should be a multiple of steps per day
         self.bee_age_experience = bee_age_experience
