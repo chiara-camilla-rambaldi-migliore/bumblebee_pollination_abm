@@ -320,14 +320,6 @@ class GreenArea(Model):
         """
         # days are simulated in the schedule
         self.schedule.step(self.type_ordered_keys)
-        
-        if (self.schedule.days != 0):
-            # simulo taglio erba periodico
-            if (self.schedule.days % self.mowing_days == 0):
-                self.mowPark()
-            # dezanzarizzazione con conseguente stordimento del bombo
-            if (self.schedule.days % self.pesticide_days == 0 and self.schedule.steps % self.steps_per_day == 0):
-                self.pesticideEffects()
 
         if self.data_collection:
             self.datacollector_bumblebees.collect(self)
@@ -336,6 +328,14 @@ class GreenArea(Model):
     def dailyStep(self):
         if self.data_collection:
             self.datacollector_colonies.collect(self)
+        
+        # dezanzarizzazione con conseguente stordimento del bombo
+        if (self.schedule.days % self.pesticide_days == 0):
+            self.pesticideEffects()
+
+        # simulo taglio erba periodico
+        if (self.schedule.days % self.mowing_days == 0 or self.schedule.days == 1):
+            self.mowPark()
 
     
     def pesticideEffects(self):

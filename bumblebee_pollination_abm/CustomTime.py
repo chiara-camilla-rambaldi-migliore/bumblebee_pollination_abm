@@ -31,6 +31,7 @@ class RandomActivationByTypeOrdered(RandomActivationByType):
                 self.daily_step_type(agent_class, shuffle_agents=shuffle_agents)
                 
         if is_daily_step:
+            self.model.dailyStep()
             if(self.days == self.model.false_year_duration):
                 self.days = 1
                 self.years += 1
@@ -49,7 +50,6 @@ class RandomActivationByTypeOrdered(RandomActivationByType):
         Args:
             type_class: Class object of the type to run.
         """
-        self.model.dailyStep()
         
         agent_keys: list[int] = list(self.agents_by_type[type_class].keys())
         if shuffle_agents:
