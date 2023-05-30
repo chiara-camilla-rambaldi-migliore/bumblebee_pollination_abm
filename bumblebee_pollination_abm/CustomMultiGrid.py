@@ -24,7 +24,13 @@ class CustomMultiGrid(MultiGrid):
         new_neighborhood = []
         for cell in neighborhood:
             x, y = cell
-            len_plants = sum(1 for a in self.grid[x][y] if a.agent_type == "plant" and a.plant_stage == PlantStage.SEED and a.plant_season == plantSeason)
+            len_plants = sum(
+                1 for a in self.grid[x][y] 
+                if a.agent_type == "plant" and 
+                a.plant_stage in (PlantStage.SEED, PlantStage.FLOWER) and 
+                a.plant_season == plantSeason and 
+                a.age == 0
+            )
             if len_plants == 0 and areaConstructor.isPointInParkBoundaries((x,y)):
                 new_neighborhood.append(cell)
         return new_neighborhood

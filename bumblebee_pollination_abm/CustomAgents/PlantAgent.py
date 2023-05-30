@@ -81,20 +81,17 @@ class PlantAgent(mesa.Agent):
     def updateStage(self):
         if self.plant_stage == PlantStage.SEED:
             if self.age >= self.seed_age:
-                if self.model.random.random() < self.seed_prob:
-                    self.plant_stage = PlantStage.FLOWER
-                    #self.model.log(f"Day: {self.model.schedule.days} \tPlant of type {self.plant_type.name} is born")
-                    self.seed_production_prob = self.initial_seed_prod_prob
-                    self.age = 0
-                else:
-                    self.setPlantDead()
+                self.plant_stage = PlantStage.FLOWER
+                self.seed_production_prob = self.initial_seed_prod_prob
+                self.age = 0
 
         elif self.plant_stage == PlantStage.FLOWER:
             self.updateFlowerStage()
 
     def updateFlowerStage(self):
         if self.age >= self.flower_age[self.plant_type]/self.max_gen_per_season:
-            if floor(self.max_seeds*self.seed_production_prob) > 0:
+            qty = floor(self.max_seeds*self.seed_production_prob)
+            if qty > 0:
                 if self.gen_number >= self.max_gen_per_season:
                     new_seed_age = (self.model.false_year_duration - self.model.schedule.days) + self.model.seed_max_age[self.plant_type]
                     new_gen_number = 1
@@ -102,7 +99,9 @@ class PlantAgent(mesa.Agent):
                     new_seed_age = 0
                     new_gen_number = self.gen_number + 1
 
-                self.model.createNewFlowers(floor(self.max_seeds*self.seed_production_prob), self, new_seed_age, new_gen_number)
+                new_qty = sum(1 if self.model.random.random() < self.seed_prob else 0 for _ in range(qty))
+
+                self.model.createNewFlowers(new_qty, self, new_seed_age, new_gen_number)
             self.setPlantDead()
 
     def setPlantDead(self):

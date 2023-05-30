@@ -10,7 +10,7 @@ import numpy as np
 
 def computeIntraInterPollen(model):
     rs = []
-    active_bumblebees = [a for a in model.schedule.agents_by_type[BeeAgent].values() if a.bee_stage in (BeeStage.BEE, BeeStage.QUEEN)]
+    active_bumblebees = [a for a in model.schedule.agents_by_type[BeeAgent].values() if a.bee_stage in (BeeStage.BEE, BeeStage.QUEEN) and a.bee_type in (BeeType.QUEEN, BeeType.MALE, BeeType.WORKER)]
     active_plants = [a for a in model.schedule.agents_by_type[PlantAgent].values() if a.plant_stage == PlantStage.FLOWER]
     if len(active_plants) == 0:
         return 0
@@ -19,6 +19,9 @@ def computeIntraInterPollen(model):
         if plant.plant_type not in plant_types:
             plant_types.append(plant.plant_type)
     for agent in active_bumblebees:
+        if agent.bee_stage == BeeStage.QUEEN and model.schedule.days > agent.queen_foraging_days:
+            continue
+
         types = {}
         for t in plant_types:
             types[t] = 0
