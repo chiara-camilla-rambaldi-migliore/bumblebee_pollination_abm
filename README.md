@@ -19,3 +19,7 @@ pip install -r requirements.txt
 ```
 mesa runserver
 ```
+
+## Parameter Optimization
+
+See (https://github.com/chiara-camilla-rambaldi-migliore/pollinator-nsga2)[https://github.com/chiara-camilla-rambaldi-migliore/pollinator-nsga2]
